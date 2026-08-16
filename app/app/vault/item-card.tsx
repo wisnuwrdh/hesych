@@ -8,11 +8,13 @@ import {
   isPasswordOld,
 } from "../../../lib/format";
 import { getSecretLock } from "../../../lib/secretlock";
+import { generateTOTP, isValidBase32, totpSecsRemaining } from "../../../lib/totp";
 import type { VaultItem } from "../../../lib/types";
 import { getCategoryMeta, useVault } from "./ctx";
 import {
   ChevronDown,
   CopyIcon,
+  EditIcon,
   EyeIcon,
   EyeOffIcon,
   LockIcon,
@@ -114,6 +116,65 @@ function CustomFields({ item }: { item: VaultItem }) {
   );
 }
 
+function TotpBlock({ item }: { item: VaultItem }) {
+  const ctx = useVault();
+  const [secret, setSecret] = useState<string | null>(null);
+  const [code, setCode] = useState("");
+  const decryptTotp = ctx.decryptTotp;
+  useEffect(() => {
+    let live = true;
+    decryptTotp(item.id)
+      .then((s) => {
+        if (live) {
+          setSecret(s);
+          if (isValidBase32(s.toUpperCase())) {
+            generateTOTP(s).then((c) => live && setCode(c));
+          }
+        }
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [item.id, decryptTotp]);
+
+  const secs = totpSecsRemaining();
+  const pct = Math.round((secs / 30) * 100);
+  const invalid = secret !== null && !isValidBase32(secret.toUpperCase());
+
+  if (secret === null || secret === "" || invalid) return null;
+
+  return (
+    <div className="totp-block">
+      <div className="detail-row">
+        <span className="detail-label">{t("totp.label")}</span>
+        <span className="detail-value totp-code" style={{ fontFamily: "var(--mono)", fontSize: 15, letterSpacing: 2 }}>
+          {code || "······"}
+        </span>
+        <button
+          className="detail-eye"
+          onClick={async () => {
+            try {
+              await navigator.clipboard.writeText(code);
+            } catch {
+              // ignore
+            }
+          }}
+          title={t("totp.copy")}
+        >
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" />
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+          </svg>
+        </button>
+      </div>
+      <div className="totp-timer">
+        <div className="totp-timer-bar" style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
+
 function ItemDetails({ item }: { item: VaultItem }) {
   const ctx = useVault();
   const revPw = ctx.revealed.get(item.id);
@@ -188,6 +249,7 @@ function ItemDetails({ item }: { item: VaultItem }) {
           <span className="detail-value">{item.notes}</span>
         </div>
       ) : null}
+      <TotpBlock item={item} />
       <div className="detail-row">
         <span className="detail-label">{t("breach.detailLabel")}</span>
         <span
@@ -227,6 +289,12 @@ function ItemDetails({ item }: { item: VaultItem }) {
           onClick={() => ctx.copyPassword(item.id)}
         >
           <CopyIcon width={11} height={11} /> {t("detail.copyPw")}
+        </button>
+        <button
+          className="act-btn"
+          onClick={() => ctx.openSheet(item)}
+        >
+          <EditIcon width={11} height={11} /> {t("detail.edit")}
         </button>
         <button
           className="act-btn-icon"

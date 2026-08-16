@@ -17,12 +17,15 @@ import {
 } from "../../../lib/crypto";
 import { checkVerifier, getSalt, isFirstTime, writeVerifierForKey } from "../../../lib/verifier";
 import {
+  buildEncryptedRow,
   loadItems,
   migrateMetadata,
   vaultDeleteItem,
   vaultSetFavorite,
+  type EncryptedVaultRow,
 } from "../../../lib/vault";
-import { openDB } from "../../../lib/db";
+import { histAdd, openDB, dbPutItem } from "../../../lib/db";
+import type { ItemSaveInput } from "./ctx";
 import {
   disableBiometric,
   hasBioSession,
@@ -40,6 +43,8 @@ import { ConfirmModal, ToastHost } from "./ui";
 import { SecretLockModal } from "./secret-lock-modal";
 import { AppShell } from "./shell";
 import { VaultCtx, type VaultFilter } from "./ctx";
+import { EditSheet } from "./edit-sheet";
+import { GenSheet } from "./gen-sheet";
 
 type Phase = "locked" | "unlocked";
 
@@ -58,6 +63,10 @@ export function VaultApp() {
   const [resetOpen, setResetOpen] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: "ok" | "err" | "warn" } | null>(null);
   const [now, setNow] = useState(0);
+  const [editing, setEditing] = useState<VaultItem | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [genOpen, setGenOpen] = useState(false);
+  const genTargetRef = useRef<((pw: string) => void) | null>(null);
 
   const keyRef = useRef<VaultKey | null>(null);
   const dbRef = useRef<IDBDatabase | null>(null);
@@ -281,6 +290,144 @@ export function VaultApp() {
     [withKey, items],
   );
 
+  const decryptUsername = useCallback(
+    (id: number): Promise<string> =>
+      withKey(async (_db, key) => {
+        const item = items.find((i) => i.id === id);
+        if (!item || !item.username) return "";
+        return decryptWith(key, item.username);
+      }),
+    [withKey, items],
+  );
+
+  const decryptTotp = useCallback(
+    (id: number): Promise<string> =>
+      withKey(async (_db, key) => {
+        const item = items.find((i) => i.id === id);
+        if (!item || !item.totp_secret) return "";
+        return decryptWith(key, item.totp_secret);
+      }),
+    [withKey, items],
+  );
+
+  const isPremium = useCallback(() => {
+    try {
+      return localStorage.getItem("vault_license_verified") === "1";
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const openSheet = useCallback(
+    (item?: VaultItem | null) => {
+      setEditing(item ?? null);
+      setSheetOpen(true);
+    },
+    [],
+  );
+
+  const closeSheet = useCallback(() => {
+    setSheetOpen(false);
+    setEditing(null);
+  }, []);
+
+  const useGenPassword = useCallback(
+    (pw: string) => {
+      setGenOpen(false);
+      genTargetRef.current?.(pw);
+    },
+    [],
+  );
+
+  const registerGenTarget = useCallback((h: ((pw: string) => void) | null) => {
+    genTargetRef.current = h;
+  }, []);
+
+  const saveItem = useCallback(
+    async (input: ItemSaveInput): Promise<boolean> => {
+      try {
+        return await withKey(async (db, key) => {
+          const meta = {
+            resetBreach: false,
+            breachStatus: null as number | null,
+            breachCheckedAt: null as number | null,
+          };
+          if (input.id !== undefined) {
+            const existing = items.find((i) => i.id === input.id);
+            if (!existing) return false;
+            const passwordChanged = !input.keepPassword && input.password.length > 0;
+            const row = await buildEncryptedRow(
+              key,
+              {
+                ...input,
+                resetBreach: passwordChanged,
+                breachStatus: existing.breachStatus ?? null,
+                breachCheckedAt: existing.breachCheckedAt ?? null,
+              },
+              existing,
+            );
+            await dbPutItem(db, row);
+            if (passwordChanged && isPremium()) {
+              await histAdd(db, input.id, existing.password);
+            }
+            setItems((prev) =>
+              prev.map((i) =>
+                i.id === input.id
+                  ? {
+                      ...i,
+                      title: input.title,
+                      username: input.username,
+                      category: input.category,
+                      tags: input.tags,
+                      custom_fields: input.custom_fields,
+                      password: row.password,
+                      totp_secret: row.totp_secret,
+                      notes: input.notes,
+                      ...(passwordChanged
+                        ? { breachStatus: undefined as number | undefined, breachCheckedAt: null }
+                        : {}),
+                      updatedAt: row.updatedAt,
+                    }
+                  : i,
+              ),
+            );
+            setToast({ msg: t("toast.saved"), type: "ok" });
+            return true;
+          }
+          const row: EncryptedVaultRow = await buildEncryptedRow(
+            key,
+            { ...input, favorite: false, ...meta },
+          );
+          const id = await dbPutItem(db, row);
+          const saved: VaultItem = {
+            id,
+            title: input.title,
+            username: input.username,
+            password: row.password,
+            notes: input.notes,
+            color: row.color,
+            favorite: !!input.favorite,
+            category: input.category,
+            tags: input.tags,
+            totp_secret: row.totp_secret,
+            custom_fields: row.custom_fields,
+            breachStatus: undefined,
+            breachCheckedAt: null,
+            updatedAt: row.updatedAt,
+            createdAt: row.createdAt,
+          };
+          setItems((prev) => [saved, ...prev]);
+          setToast({ msg: t("toast.saved"), type: "ok" });
+          return true;
+        });
+      } catch {
+        setToast({ msg: t("toast.saveFail"), type: "err" });
+        return false;
+      }
+    },
+    [withKey, items, isPremium],
+  );
+
   const copyPassword = useCallback(
     async (id: number) => {
       try {
@@ -448,6 +595,18 @@ export function VaultApp() {
       toggleFav,
       decryptPassword,
       decryptField,
+      decryptUsername,
+      decryptTotp,
+      editing,
+      sheetOpen,
+      openSheet,
+      closeSheet,
+      saveItem,
+      genOpen,
+      setGenOpen,
+      useGenPassword,
+      registerGenTarget,
+      isPremium,
       list,
       counts,
       itemCount: items.length,
@@ -458,6 +617,8 @@ export function VaultApp() {
       items, filter, search, pendingDelete, pendingSecretLock, detailId,
       expanded, revealed, toggleExpand, toggleReveal, copyPassword,
       copyUsername, copyField, toggleFav, decryptPassword, decryptField,
+      decryptUsername, decryptTotp, editing, sheetOpen, openSheet, closeSheet, saveItem,
+      genOpen, useGenPassword, registerGenTarget, isPremium,
       list, counts, now, doLock,
     ],
   );
@@ -480,6 +641,8 @@ export function VaultApp() {
         <AppShell onLock={doLock} bioOn={bioAvailable} />
       )}
 
+      <EditSheet />
+      {genOpen ? <GenSheet /> : null}
       <ConfirmModal
         open={pendingDelete !== null}
         title={t("delete.title")}

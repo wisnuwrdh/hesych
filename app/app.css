@@ -1998,3 +1998,21 @@ svg{display:block;flex-shrink:0}
   background: currentColor;
 }
 
+/* TOTP block (React) */
+.totp-block{margin-top:2px;padding-bottom:4px}
+.totp-timer{height:3px;border-radius:2px;background:var(--border);margin-top:6px;overflow:hidden}
+.totp-timer-bar{height:100%;background:var(--accent);transition:width 1s linear;border-radius:2px}
+
+/* Premium gate in sheets (React) */
+.cf-premium-gate{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  margin-top:6px;padding:10px 12px;border-radius:10px;
+  background:var(--surface);border:1px solid var(--border);
+}
+.cf-form-item{margin-bottom:8px}
+.cf-form-item:last-of-type{margin-bottom:4px}
+
+/* Strength meter fill (React) */
+.form-strength-seg.lit{background:var(--accent)}
+
+
