@@ -1,0 +1,200 @@
+// Typed IndexedDB wrapper for the legacy-compatible VaultDB (v6).
+// Client-only: requires globalThis.indexedDB (browser or fake-indexeddb).
+
+import {
+  DB_NAME,
+  DB_VER,
+  HIST_MAX,
+  STORE_HISTORY,
+  STORE_ITEMS,
+  STORE_SHARE_LOG,
+} from "./constants";
+import type {
+  EncryptedVaultRow,
+  PasswordHistoryEntry,
+  ShareLogEntry,
+} from "./types";
+
+let _dbPromise: Promise<IDBDatabase> | null = null;
+
+export function openDB(): Promise<IDBDatabase> {
+  if (_dbPromise) return _dbPromise;
+  _dbPromise = new Promise((resolve, reject) => {
+    if (typeof indexedDB === "undefined") {
+      reject(new Error("indexedDB is not available"));
+      return;
+    }
+    if (typeof navigator !== "undefined" && navigator.storage?.persist) {
+      navigator.storage.persist().catch(() => {});
+    }
+    const req = indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded = (e) => {
+      const d = (e.target as IDBOpenDBRequest).result;
+      if (!d.objectStoreNames.contains(STORE_ITEMS)) {
+        d.createObjectStore(STORE_ITEMS, { keyPath: "id", autoIncrement: true });
+      }
+      if (!d.objectStoreNames.contains(STORE_HISTORY)) {
+        const hs = d.createObjectStore(STORE_HISTORY, {
+          keyPath: "hid",
+          autoIncrement: true,
+        });
+        hs.createIndex("itemId", "itemId", { unique: false });
+      }
+      if (!d.objectStoreNames.contains(STORE_SHARE_LOG)) {
+        const sl = d.createObjectStore(STORE_SHARE_LOG, {
+          keyPath: "slid",
+          autoIncrement: true,
+        });
+        sl.createIndex("itemId", "itemId", { unique: false });
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error ?? new Error("openDB failed"));
+  });
+  return _dbPromise;
+}
+
+/** Reset the cached handle — only used in tests. */
+export function __resetDBForTests(): void {
+  _dbPromise = null;
+}
+
+function withStore<T>(
+  db: IDBDatabase,
+  store: string,
+  mode: IDBTransactionMode,
+  fn: (s: IDBObjectStore) => IDBRequest | IDBRequest<T>,
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const tx = db.transaction(store, mode);
+    const req = fn(tx.objectStore(store));
+    tx.oncomplete = () => resolve(req.result as T);
+    tx.onerror = () => reject(tx.error ?? new Error("transaction failed"));
+    tx.onabort = () => reject(tx.error ?? new Error("transaction aborted"));
+    req.onerror = () => reject(req.error ?? new Error("request failed"));
+  });
+}
+
+// ===== items =====
+
+export async function dbGetAll(db: IDBDatabase): Promise<EncryptedVaultRow[]> {
+  return withStore<EncryptedVaultRow[]>(db, STORE_ITEMS, "readonly", (s) =>
+    s.getAll(),
+  );
+}
+
+export async function dbGetItem(
+  db: IDBDatabase,
+  id: number,
+): Promise<EncryptedVaultRow | undefined> {
+  return withStore<EncryptedVaultRow>(db, STORE_ITEMS, "readonly", (s) =>
+    s.get(id) as IDBRequest<EncryptedVaultRow>,
+  );
+}
+
+export async function dbPutItem(
+  db: IDBDatabase,
+  row: EncryptedVaultRow,
+): Promise<number> {
+  const key = await withStore<number>(db, STORE_ITEMS, "readwrite", (s) =>
+    s.put(row),
+  );
+  return key;
+}
+
+export async function dbDeleteItem(
+  db: IDBDatabase,
+  id: number,
+): Promise<void> {
+  await withStore<void>(db, STORE_ITEMS, "readwrite", (s) => s.delete(id));
+}
+
+export async function dbClearItems(db: IDBDatabase): Promise<void> {
+  await withStore<void>(db, STORE_ITEMS, "readwrite", (s) => s.clear());
+}
+
+// ===== password history =====
+
+export async function histGetAll(
+  db: IDBDatabase,
+  itemId: number,
+): Promise<PasswordHistoryEntry[]> {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_HISTORY, "readonly");
+    const idx = tx.objectStore(STORE_HISTORY).index("itemId");
+    const req = idx.getAll(itemId);
+    req.onsuccess = () =>
+      resolve((req.result as PasswordHistoryEntry[]).sort((a, b) => a.hid! - b.hid!));
+    req.onerror = () => reject(req.error);
+  });
+}
+
+export async function histGetAllItems(
+  db: IDBDatabase,
+): Promise<PasswordHistoryEntry[]> {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_HISTORY, "readonly");
+    const req = tx.objectStore(STORE_HISTORY).getAll();
+    req.onsuccess = () => resolve(req.result as PasswordHistoryEntry[]);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+export async function histAdd(
+  db: IDBDatabase,
+  itemId: number,
+  encPassword: string,
+): Promise<number> {
+  const existing = await histGetAll(db, itemId);
+  if (existing.length >= HIST_MAX) {
+    const oldest = existing[0];
+    await withStore<void>(db, STORE_HISTORY, "readwrite", (s) =>
+      s.delete(oldest.hid!),
+    );
+  }
+  return withStore<number>(db, STORE_HISTORY, "readwrite", (s) =>
+    s.add({ itemId, encPassword, changedAt: Date.now() }),
+  );
+}
+
+export async function histDelete(db: IDBDatabase, hid: number): Promise<void> {
+  await withStore<void>(db, STORE_HISTORY, "readwrite", (s) => s.delete(hid));
+}
+
+export async function histDeleteAllByItem(
+  db: IDBDatabase,
+  itemId: number,
+): Promise<void> {
+  const entries = await histGetAll(db, itemId);
+  for (const e of entries) await histDelete(db, e.hid!);
+}
+
+export async function histClear(db: IDBDatabase): Promise<void> {
+  await withStore<void>(db, STORE_HISTORY, "readwrite", (s) => s.clear());
+}
+
+// ===== share log =====
+
+export async function shareLogAdd(
+  db: IDBDatabase,
+  entry: Omit<ShareLogEntry, "slid">,
+): Promise<number> {
+  return withStore<number>(db, STORE_SHARE_LOG, "readwrite", (s) =>
+    s.add(entry),
+  );
+}
+
+export async function shareLogAll(
+  db: IDBDatabase,
+): Promise<ShareLogEntry[]> {
+  return withStore<ShareLogEntry[]>(db, STORE_SHARE_LOG, "readonly", (s) =>
+    s.getAll(),
+  );
+}
+
+export async function shareLogDelete(
+  db: IDBDatabase,
+  slid: number,
+): Promise<void> {
+  await withStore<void>(db, STORE_SHARE_LOG, "readwrite", (s) => s.delete(slid));
+}
