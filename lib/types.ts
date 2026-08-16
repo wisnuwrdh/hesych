@@ -35,9 +35,11 @@ export type EncryptedVaultRow = {
   totp_secret: string;
   custom_fields: CustomField[];
   category: string | null;
-  tags: string | null;
-  breachStatus: string | null;
-  breachCheckedAt: string | null;
+  // Pre-v6 rows kept these as plaintext (string[] / number / number); v6 rows
+  // store base64 AES-GCM ciphertext strings. Both shapes must be representable.
+  tags: string | string[] | null;
+  breachStatus: string | number | null;
+  breachCheckedAt: string | number | null;
   _metaV: number;
   updatedAt: number | null;
   createdAt: number | null;

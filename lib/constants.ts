@@ -40,5 +40,6 @@ export const STORAGE_KEYS = {
   bioEnabled: "vault_bio_enabled",
   bioPrf: "vault_bio_prf",
   bioSession: "vault_bio_session",
+  bioKey: "vault_bio_key",
   bioExpiry: "vault_bio_expiry",
 } as const;
