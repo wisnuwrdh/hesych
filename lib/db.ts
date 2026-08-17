@@ -198,3 +198,7 @@ export async function shareLogDelete(
 ): Promise<void> {
   await withStore<void>(db, STORE_SHARE_LOG, "readwrite", (s) => s.delete(slid));
 }
+
+export async function shareLogClear(db: IDBDatabase): Promise<void> {
+  await withStore<void>(db, STORE_SHARE_LOG, "readwrite", (s) => s.clear());
+}

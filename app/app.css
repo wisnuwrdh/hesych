@@ -2004,6 +2004,7 @@ svg{display:block;flex-shrink:0}
 .totp-timer-bar{height:100%;background:var(--accent);transition:width 1s linear;border-radius:2px}
 
 /* Premium gate in sheets (React) */
+.adv-filter-wrap{position:relative;margin-left:auto;flex-shrink:0}
 .cf-premium-gate{
   display:flex;align-items:center;justify-content:space-between;gap:10px;
   margin-top:6px;padding:10px 12px;border-radius:10px;
@@ -2014,5 +2015,15 @@ svg{display:block;flex-shrink:0}
 
 /* Strength meter fill (React) */
 .form-strength-seg.lit{background:var(--accent)}
+
+.hist-pw-val{min-width:0}
+
+.import-file-row{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:10px 12px;border-radius:10px;
+  border:1px dashed var(--border);background:var(--surface);
+  font-size:12px;color:var(--sub);cursor:pointer;
+}
+.import-file-row:hover{border-color:var(--accent);color:var(--text)}
 
 

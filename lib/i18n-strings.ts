@@ -77,6 +77,7 @@ export const STRINGS = {
   "cp.verifying": "Verifying…",
   "cp.reEncrypting": "Re-encrypting data…",
   "cp.wrongOld": "Old master password is incorrect",
+  "cp.failed": "Change failed. Vault unchanged.",
   "import.title": "Import Backup",
   "import.desc": "Found <strong id=\"importCount\">0</strong> items in this backup file. Choose an import mode:",
   "import.mergeBtn": "Merge",

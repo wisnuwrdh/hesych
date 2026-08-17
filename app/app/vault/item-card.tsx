@@ -296,6 +296,19 @@ function ItemDetails({ item }: { item: VaultItem }) {
         >
           <EditIcon width={11} height={11} /> {t("detail.edit")}
         </button>
+        {ctx.isPremium() ? (
+          <button
+            className="act-btn-icon"
+            style={{ color: "var(--accent)", borderColor: "var(--accent-dim)" }}
+            onClick={() => ctx.openHist(item)}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>{" "}
+            <span style={{ fontSize: 11 }}>History</span>
+          </button>
+        ) : null}
         <button
           className="act-btn-icon"
           style={item.favorite ? { color: "var(--yellow)" } : undefined}

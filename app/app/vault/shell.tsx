@@ -6,6 +6,7 @@ import { STORAGE_KEYS } from "../../../lib/constants";
 import { renderHtmlKey } from "./ui";
 import { DetailPanel, ItemCard } from "./item-card";
 import { FILTERS, useVault, type VaultFilter } from "./ctx";
+import { AdvFilterBar } from "./adv-filter";
 import {
   FingerprintIcon,
   LockIcon,
@@ -174,6 +175,7 @@ function EmptyState() {
 }
 
 function OverflowMenu({ onLock }: { onLock: () => void }) {
+  const ctx = useVault();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -190,6 +192,29 @@ function OverflowMenu({ onLock }: { onLock: () => void }) {
       </button>
       {open ? (
         <div className="overflow-dropdown">
+          <button className="overflow-item" onClick={() => { setOpen(false); ctx.setCpOpen(true); }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="8" r="4" />
+              <path d="M6 20v-1a6 6 0 0 1 12 0v1" />
+            </svg>
+            <span>{t("app.changePwTitle")}</span>
+          </button>
+          <button className="overflow-item" onClick={() => { setOpen(false); ctx.setBackupOpen(true); }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            <span>{t("encExport.menuItem")}</span>
+          </button>
+          <button className="overflow-item" onClick={() => { setOpen(false); ctx.setImportOpen(true); }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+            <span>{t("import.title")}</span>
+          </button>
           <button className="overflow-item" onClick={onLock}>
             <LockIcon width={14} height={14} />
             <span>{t("app.lockTitle")}</span>
@@ -257,6 +282,7 @@ export function AppShell({ onLock, bioOn }: { onLock: () => void; bioOn: boolean
               {t(`filter.${f}`)}
             </button>
           ))}
+          <AdvFilterBar />
         </div>
 
         <div className="search-wrap">

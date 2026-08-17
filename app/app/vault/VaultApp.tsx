@@ -15,7 +15,7 @@ import {
   decryptWith,
   type VaultKey,
 } from "../../../lib/crypto";
-import { checkVerifier, getSalt, isFirstTime, writeVerifierForKey } from "../../../lib/verifier";
+import { getSalt, writeVerifierForKey, checkVerifier, isFirstTime } from "../../../lib/verifier";
 import {
   buildEncryptedRow,
   loadItems,
@@ -24,7 +24,13 @@ import {
   vaultSetFavorite,
   type EncryptedVaultRow,
 } from "../../../lib/vault";
-import { histAdd, openDB, dbPutItem } from "../../../lib/db";
+import { histAdd, openDB, dbPutItem, histGetAll, histDelete } from "../../../lib/db";
+import { reencryptVault } from "../../../lib/master";
+import {
+  exportMasterBackup,
+  exportCustomBackup,
+  importBackup as importBackupJson,
+} from "../../../lib/backup";
 import type { ItemSaveInput } from "./ctx";
 import {
   disableBiometric,
@@ -36,15 +42,19 @@ import {
   setBioSession,
   getCredIdB64,
 } from "../../../lib/bio";
+import { isPasswordOld } from "../../../lib/format";
 import { isItemSecretLocked } from "../../../lib/secretlock";
 import type { VaultItem } from "../../../lib/types";
 import { LockScreen } from "./lock-screen";
 import { ConfirmModal, ToastHost } from "./ui";
 import { SecretLockModal } from "./secret-lock-modal";
 import { AppShell } from "./shell";
-import { VaultCtx, type VaultFilter } from "./ctx";
+import { VaultCtx, type VaultFilter, DEFAULT_ADV, type AdvFilter } from "./ctx";
 import { EditSheet } from "./edit-sheet";
 import { GenSheet } from "./gen-sheet";
+import { ChangePwSheet } from "./cp-sheet";
+import { HistorySheet } from "./history-sheet";
+import { ExportSheet, ImportSheet } from "./backup-sheets";
 
 type Phase = "locked" | "unlocked";
 
@@ -55,6 +65,7 @@ export function VaultApp() {
   const [items, setItems] = useState<VaultItem[]>([]);
   const [filter, setFilter] = useState<VaultFilter>("all");
   const [search, setSearch] = useState("");
+  const [adv, setAdv] = useState<AdvFilter>(DEFAULT_ADV);
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [revealed, setRevealed] = useState<Map<number, string>>(new Map());
   const [detailId, setDetailId] = useState<number | null>(null);
@@ -66,6 +77,10 @@ export function VaultApp() {
   const [editing, setEditing] = useState<VaultItem | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [genOpen, setGenOpen] = useState(false);
+  const [cpOpen, setCpOpen] = useState(false);
+  const [histItem, setHistItem] = useState<VaultItem | null>(null);
+  const [backupOpen, setBackupOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const genTargetRef = useRef<((pw: string) => void) | null>(null);
 
   const keyRef = useRef<VaultKey | null>(null);
@@ -428,6 +443,96 @@ export function VaultApp() {
     [withKey, items, isPremium],
   );
 
+  const changeMasterPw = useCallback(
+    async (oldPw: string, newPw: string): Promise<string | null> => {
+      const db = dbRef.current;
+      const key = keyRef.current;
+      if (!db || !key) return "cp.failed";
+      const salt = getSalt();
+      if (!(await checkVerifier(oldPw, salt))) return "cp.wrongOld";
+      try {
+        const newKey = await deriveKey(newPw, salt);
+        await reencryptVault(db, key, newKey);
+        await writeVerifierForKey(newKey);
+        keyRef.current = newKey;
+        await enterVault(db, newKey);
+        return null;
+      } catch (e) {
+        console.warn("change master password", e);
+        return "cp.failed";
+      }
+    },
+    [enterVault],
+  );
+
+  const decryptRaw = useCallback(
+    (b64: string): Promise<string> =>
+      withKey(async (_db, key) => decryptWith(key, b64)),
+    [withKey],
+  );
+
+  const loadHistory = useCallback(
+    (itemId: number) => withKey((db) => histGetAll(db, itemId)),
+    [withKey],
+  );
+
+  const deleteHistoryEntry = useCallback(
+    (hid: number) => withKey((db) => histDelete(db, hid)),
+    [withKey],
+  );
+
+  const openHist = useCallback((item: VaultItem) => setHistItem(item), []);
+  const closeHist = useCallback(() => setHistItem(null), []);
+
+  const doExport = useCallback(
+    async (mode: "master" | "custom", pw?: string): Promise<string | null> => {
+      const db = dbRef.current;
+      const key = keyRef.current;
+      if (!db || !key) return "Vault closed";
+      try {
+        const bundle =
+          mode === "custom"
+            ? await exportCustomBackup(db, key, pw || "")
+            : await exportMasterBackup(db);
+        const blob = new Blob([JSON.stringify(bundle)], {
+          type: "application/json",
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `hesych_backup_${Date.now()}.vault`;
+        a.click();
+        URL.revokeObjectURL(url);
+        return null;
+      } catch (e) {
+        return e instanceof Error ? e.message : String(e);
+      }
+    },
+    [],
+  );
+
+  const doImport = useCallback(
+    async (
+      file: File,
+      mode: "replace" | "merge",
+      pw?: string,
+    ): Promise<string | null> => {
+      const db = dbRef.current;
+      const key = keyRef.current;
+      if (!db || !key) return "Vault closed";
+      try {
+        const text = await file.text();
+        const bundle = JSON.parse(text);
+        await importBackupJson(db, bundle, key, mode, pw);
+        await enterVault(db, key);
+        return null;
+      } catch (e) {
+        return e instanceof Error ? e.message : String(e);
+      }
+    },
+    [enterVault],
+  );
+
   const copyPassword = useCallback(
     async (id: number) => {
       try {
@@ -545,6 +650,25 @@ export function VaultApp() {
       if (filter !== "all") return i.category === filter;
       return true;
     });
+    if (adv.tags.length) {
+      out = out.filter((i) => adv.tags.every((tag) => (i.tags || []).includes(tag)));
+    }
+    if (adv.status !== "all") {
+      out = out.filter((i) => {
+        if (adv.status === "breached") return i.breachStatus === 2;
+        if (adv.status === "safe") return i.breachStatus === 1;
+        if (adv.status === "unchecked")
+          return i.breachStatus === undefined || i.breachStatus === null;
+        return true;
+      });
+    }
+    if (adv.age !== "all") {
+      out = out.filter((i) => {
+        if (adv.age === "old") return isPasswordOld(i);
+        if (adv.age === "new") return !!i.updatedAt && !isPasswordOld(i);
+        return true;
+      });
+    }
     if (q) {
       out = out.filter(
         (i) =>
@@ -559,7 +683,7 @@ export function VaultApp() {
       out = [...out.filter((i) => i.favorite), ...out.filter((i) => !i.favorite)];
     }
     return out;
-  }, [items, filter, search]);
+  }, [items, filter, search, adv]);
 
   const counts = useMemo(() => {
     const c: Record<string, number> = {
@@ -607,9 +731,30 @@ export function VaultApp() {
       useGenPassword,
       registerGenTarget,
       isPremium,
+      cpOpen,
+      setCpOpen,
+      changeMasterPw,
+      histItem,
+      openHist,
+      closeHist,
+      decryptRaw,
+      loadHistory,
+      deleteHistoryEntry,
+      backupOpen,
+      setBackupOpen,
+      importOpen,
+      setImportOpen,
+      doExport,
+      doImport,
       list,
       counts,
       itemCount: items.length,
+      adv,
+      setAdv,
+      advCount:
+        adv.tags.length +
+        (adv.status !== "all" ? 1 : 0) +
+        (adv.age !== "all" ? 1 : 0),
       now,
       onLock: doLock,
     }),
@@ -618,8 +763,10 @@ export function VaultApp() {
       expanded, revealed, toggleExpand, toggleReveal, copyPassword,
       copyUsername, copyField, toggleFav, decryptPassword, decryptField,
       decryptUsername, decryptTotp, editing, sheetOpen, openSheet, closeSheet, saveItem,
-      genOpen, useGenPassword, registerGenTarget, isPremium,
-      list, counts, now, doLock,
+      genOpen, useGenPassword, registerGenTarget, isPremium, cpOpen, changeMasterPw,
+      histItem, openHist, closeHist, decryptRaw, loadHistory, deleteHistoryEntry,
+      backupOpen, setBackupOpen, importOpen, setImportOpen, doExport, doImport,
+      list, counts, adv, now, doLock,
     ],
   );
 
@@ -643,6 +790,10 @@ export function VaultApp() {
 
       <EditSheet />
       {genOpen ? <GenSheet /> : null}
+      <ChangePwSheet />
+      <HistorySheet />
+      <ExportSheet />
+      <ImportSheet />
       <ConfirmModal
         open={pendingDelete !== null}
         title={t("delete.title")}

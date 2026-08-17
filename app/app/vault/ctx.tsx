@@ -6,6 +6,20 @@ import type { Category, CustomField, VaultItem } from "../../../lib/types";
 
 export type VaultFilter = "all" | "fav" | Category;
 
+export interface AdvFilter {
+  tags: string[];
+  status: "all" | "safe" | "breached" | "unchecked";
+  strength: "all" | "weak" | "fair" | "strong";
+  age: "all" | "new" | "old";
+}
+
+export const DEFAULT_ADV: AdvFilter = {
+  tags: [],
+  status: "all",
+  strength: "all",
+  age: "all",
+};
+
 export interface ItemSaveInput {
   id?: number;
   title: string;
@@ -27,6 +41,9 @@ export interface VaultCtx {
   setFilter: (f: VaultFilter) => void;
   search: string;
   setSearch: (q: string) => void;
+  adv: AdvFilter;
+  setAdv: (f: AdvFilter) => void;
+  advCount: number;
   pendingDelete: VaultItem | null;
   setPendingDelete: (i: VaultItem | null) => void;
   pendingSecretLock: VaultItem | null;
@@ -55,6 +72,21 @@ export interface VaultCtx {
   useGenPassword: (pw: string) => void;
   registerGenTarget: (h: ((pw: string) => void) | null) => void;
   isPremium: () => boolean;
+  cpOpen: boolean;
+  setCpOpen: (v: boolean) => void;
+  changeMasterPw: (oldPw: string, newPw: string) => Promise<string | null>;
+  histItem: VaultItem | null;
+  openHist: (item: VaultItem) => void;
+  closeHist: () => void;
+  decryptRaw: (b64: string) => Promise<string>;
+  loadHistory: (itemId: number) => Promise<import("../../../lib/types").PasswordHistoryEntry[]>;
+  deleteHistoryEntry: (hid: number) => Promise<void>;
+  backupOpen: boolean;
+  setBackupOpen: (v: boolean) => void;
+  importOpen: boolean;
+  setImportOpen: (v: boolean) => void;
+  doExport: (mode: "master" | "custom", pw?: string) => Promise<string | null>;
+  doImport: (file: File, mode: "replace" | "merge", pw?: string) => Promise<string | null>;
   list: VaultItem[];
   counts: Record<string, number>;
   itemCount: number;
