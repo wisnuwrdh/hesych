@@ -2059,3 +2059,11 @@ svg{display:block;flex-shrink:0}
   animation:spinner-rotate 0.7s linear infinite;
 }
 @keyframes spinner-rotate{to{transform:rotate(360deg)}}
+
+/* ===== Generator bulk ===== */
+.gen-bulk{margin-top:12px}
+.gen-section-title{
+  font-size:12px;font-weight:600;color:var(--accent);
+  text-transform:uppercase;letter-spacing:.04em;
+  margin:2px 0 4px;
+}

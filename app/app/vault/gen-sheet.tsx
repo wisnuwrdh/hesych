@@ -44,9 +44,13 @@ export function GenSheet() {
   const ctx = useVault();
   const [opts, setOpts] = useState<GenOptions>(optsStore);
   const [pw, setPw] = useState(() => generateOne(optsStore));
+  const [bulkCount, setBulkCount] = useState(5);
   const [bulk, setBulk] = useState<string[]>(() =>
     Array.from({ length: 5 }, () => generateOne(optsStore)),
   );
+  const [copiedAll, setCopiedAll] = useState(false);
+  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+  const [copiedSingle, setCopiedSingle] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const closeGen = ctx.setGenOpen;
 
@@ -60,7 +64,13 @@ export function GenSheet() {
 
   const regen = () => {
     setPw(generateOne(opts));
-    setBulk(Array.from({ length: 5 }, () => generateOne(opts)));
+    setBulk(Array.from({ length: bulkCount }, () => generateOne(opts)));
+  };
+
+  const changeCount = (n: number) => {
+    const c = Math.max(1, Math.min(50, Math.round(n)));
+    setBulkCount(c);
+    setBulk(Array.from({ length: c }, () => generateOne(opts)));
   };
 
   const update = (patch: Partial<GenOptions>) => {
@@ -73,11 +83,43 @@ export function GenSheet() {
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(pw);
+      setCopiedSingle(true);
+      setTimeout(() => setCopiedSingle(false), 1500);
       setTimeout(() => navigator.clipboard.writeText("").catch(() => {}), 30000);
     } catch {
       // ignore
     }
   };
+
+  const copyOne = async (p: string, i: number) => {
+    try {
+      await navigator.clipboard.writeText(p);
+      setCopiedIdx(i);
+      setTimeout(() => setCopiedIdx(null), 1500);
+    } catch {
+      // ignore
+    }
+  };
+
+  const copyAll = async () => {
+    try {
+      await navigator.clipboard.writeText(bulk.join("\n"));
+      setCopiedAll(true);
+      setTimeout(() => {
+        navigator.clipboard.writeText("").catch(() => {});
+        setCopiedAll(false);
+      }, 30000);
+    } catch {
+      // ignore
+    }
+  };
+
+  const CopySvg = (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="9" y="9" width="13" height="13" rx="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </svg>
+  );
 
   return (
     <>
@@ -138,11 +180,8 @@ export function GenSheet() {
             style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
             onClick={copy}
           >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="9" y="9" width="13" height="13" rx="2" />
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-            </svg>
-            Copy
+            {CopySvg}
+            {copiedSingle ? t("gen.copied") : "Copy"}
           </button>
         </div>
 
@@ -217,18 +256,70 @@ export function GenSheet() {
             </>
           )}
 
-          {ctx.isPremium() && bulk.length ? (
-            <div className="gen-bulk-list">
-              {bulk.map((p, i) => (
-                <div className="gen-bulk-item" key={i}>
-                  <span className="gen-bulk-pw">{p}</span>
-                  <button className="gen-bulk-use" onClick={() => ctx.useGenPassword(p)}>
-                    Use
-                  </button>
+                      {ctx.isPremium() ? (
+              <div className="gen-bulk">
+                <div className="gen-section-title">{t("gen.bulk")}</div>
+                <div className="gen-option-row">
+                  <div>
+                    <div className="gen-option-label">
+                      {t("gen.bulkCount", { n: bulkCount })}
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <input
+                      type="range"
+                      className="gen-slider"
+                      min={1}
+                      max={50}
+                      value={bulkCount}
+                      onChange={(e) => changeCount(Number(e.target.value))}
+                    />
+                    <span className="gen-slider-val">{bulkCount}</span>
+                  </div>
                 </div>
-              ))}
-            </div>
-          ) : null}
+                <div className="gen-bulk-list">
+                  {bulk.map((p, i) => (
+                    <div className="gen-bulk-item" key={`${i}-${p.slice(0, 4)}`}>
+                      <span className="gen-bulk-pw">{p}</span>
+                      <button
+                        className="gen-bulk-copy"
+                        title={t("gen.copied")}
+                        onClick={() => copyOne(p, i)}
+                      >
+                        {copiedIdx === i ? (
+                          <span style={{ fontSize: 10, color: "#4ade80" }}>✓</span>
+                        ) : (
+                          CopySvg
+                        )}
+                      </button>
+                      <button className="gen-bulk-use" onClick={() => ctx.useGenPassword(p)}>
+                        Use
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  className="gen-action-btn secondary"
+                  style={{ width: "100%", marginTop: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+                  onClick={copyAll}
+                >
+                  {CopySvg}
+                  {copiedAll ? t("gen.bulkCopied") : t("gen.copyAll")}
+                </button>
+              </div>
+            ) : (
+              <div className="premium-gate" style={{ marginTop: 12 }}>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 500, color: "var(--accent)" }}>
+                    {t("gen.bulk")}
+                  </div>
+                  <div style={{ fontSize: 11, color: "var(--dim)", marginTop: 2 }}>
+                    {t("gen.premiumHint")}
+                  </div>
+                </div>
+                <span className="premium-badge">PRO</span>
+              </div>
+            )}
         </div>
         <div style={{ height: 20 }} />
       </div>
