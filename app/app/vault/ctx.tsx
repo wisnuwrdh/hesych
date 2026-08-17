@@ -91,6 +91,10 @@ export interface VaultCtx {
   breachChecking: Set<number>;
   checkItemBreach: (id: number) => Promise<void>;
   checkAllBreaches: () => Promise<void>;
+  strengthMap: Map<number, number>;
+  healthOpen: boolean;
+  setHealthOpen: (v: boolean) => void;
+  checkHealth: () => Promise<import("../../../lib/health").HealthReport | null>;
   list: VaultItem[];
   counts: Record<string, number>;
   itemCount: number;

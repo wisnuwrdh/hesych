@@ -36,6 +36,8 @@ import {
   checkAllItems,
   saveBreachResult,
 } from "../../../lib/breach";
+import { scanVaultHealth, type HealthReport } from "../../../lib/health";
+import { scorePassword } from "../../../lib/password";
 import type { ItemSaveInput } from "./ctx";
 import {
   disableBiometric,
@@ -60,6 +62,7 @@ import { GenSheet } from "./gen-sheet";
 import { ChangePwSheet } from "./cp-sheet";
 import { HistorySheet } from "./history-sheet";
 import { ExportSheet, ImportSheet } from "./backup-sheets";
+import { HealthSheet } from "./health-sheet";
 
 type Phase = "locked" | "unlocked";
 
@@ -88,6 +91,8 @@ export function VaultApp() {
   const [importOpen, setImportOpen] = useState(false);
   const [breachRunning, setBreachRunning] = useState(false);
   const [breachChecking, setBreachChecking] = useState<Set<number>>(new Set());
+  const [strengthMap, setStrengthMap] = useState<Map<number, number>>(new Map());
+  const [healthOpen, setHealthOpen] = useState(false);
   const genTargetRef = useRef<((pw: string) => void) | null>(null);
 
   const keyRef = useRef<VaultKey | null>(null);
@@ -164,6 +169,24 @@ export function VaultApp() {
 
   // ===== unlock / create =====
 
+  const populateStrengths = useCallback(async (list: VaultItem[], key: VaultKey) => {
+    if (list.length === 0) return;
+    for (const item of list) {
+      try {
+        const pw = await decryptWith(key, item.password);
+        const score = scorePassword(pw);
+        setStrengthMap((prev) => {
+          if (prev.get(item.id) === score) return prev;
+          const next = new Map(prev);
+          next.set(item.id, score);
+          return next;
+        });
+      } catch {
+        // leave unpopulated → treated as strong until computed
+      }
+    }
+  }, []);
+
   const enterVault = useCallback(async (db: IDBDatabase, key: VaultKey) => {
     const { items: loaded, needMigrate } = await loadItems(db, key);
     if (needMigrate.length) {
@@ -174,10 +197,12 @@ export function VaultApp() {
     keyRef.current = key;
     dbRef.current = db;
     setItems(loaded);
+    setStrengthMap(new Map());
     setExpanded(new Set());
     setRevealed(new Map());
     setPhase("unlocked");
-  }, []);
+    void populateStrengths(loaded, key);
+  }, [populateStrengths]);
 
   const handlePasswordSubmit = useCallback(
     async (pw: string, isSetup: boolean): Promise<boolean> => {
@@ -377,6 +402,7 @@ export function VaultApp() {
           if (input.id !== undefined) {
             const existing = items.find((i) => i.id === input.id);
             if (!existing) return false;
+            const itemId = input.id;
             const passwordChanged = !input.keepPassword && input.password.length > 0;
             const row = await buildEncryptedRow(
               key,
@@ -413,6 +439,15 @@ export function VaultApp() {
                   : i,
               ),
             );
+            if (!input.keepPassword) {
+              const score = scorePassword(input.password);
+              setStrengthMap((prev) => {
+                if (prev.get(itemId) === score) return prev;
+                const next = new Map(prev);
+                next.set(itemId, score);
+                return next;
+              });
+            }
             setToast({ msg: t("toast.saved"), type: "ok" });
             return true;
           }
@@ -439,6 +474,13 @@ export function VaultApp() {
             createdAt: row.createdAt,
           };
           setItems((prev) => [saved, ...prev]);
+          setStrengthMap((prev) => {
+            const score = scorePassword(input.password);
+            if (prev.get(id) === score) return prev;
+            const next = new Map(prev);
+            next.set(id, score);
+            return next;
+          });
           setToast({ msg: t("toast.saved"), type: "ok" });
           return true;
         });
@@ -614,6 +656,24 @@ export function VaultApp() {
     [items, updateItemMeta],
   );
 
+  const checkHealth = useCallback(
+    async (): Promise<HealthReport | null> => {
+      const db = dbRef.current;
+      const key = keyRef.current;
+      if (!db || !key) return null;
+      const current = items;
+      return scanVaultHealth(current, key, (id, score) => {
+        setStrengthMap((prev) => {
+          if (prev.get(id) === score) return prev;
+          const next = new Map(prev);
+          next.set(id, score);
+          return next;
+        });
+      });
+    },
+    [items],
+  );
+
   const copyPassword = useCallback(
     async (id: number) => {
       try {
@@ -750,6 +810,15 @@ export function VaultApp() {
         return true;
       });
     }
+    if (adv.strength !== "all") {
+      out = out.filter((i) => {
+        const s = strengthMap.get(i.id);
+        if (adv.strength === "weak") return s !== undefined && s <= 2;
+        if (adv.strength === "strong") return s !== undefined && s >= 3;
+        if (adv.strength === "fair") return s === 3;
+        return true;
+      });
+    }
     if (q) {
       out = out.filter(
         (i) =>
@@ -764,7 +833,7 @@ export function VaultApp() {
       out = [...out.filter((i) => i.favorite), ...out.filter((i) => !i.favorite)];
     }
     return out;
-  }, [items, filter, search, adv]);
+  }, [items, filter, search, adv, strengthMap]);
 
   const counts = useMemo(() => {
     const c: Record<string, number> = {
@@ -839,9 +908,14 @@ export function VaultApp() {
       advCount:
         adv.tags.length +
         (adv.status !== "all" ? 1 : 0) +
-        (adv.age !== "all" ? 1 : 0),
+        (adv.age !== "all" ? 1 : 0) +
+        (adv.strength !== "all" ? 1 : 0),
       now,
       onLock: doLock,
+      strengthMap,
+      healthOpen,
+      setHealthOpen,
+      checkHealth,
     }),
     [
       items, filter, search, pendingDelete, pendingSecretLock, detailId,
@@ -852,6 +926,7 @@ export function VaultApp() {
       histItem, openHist, closeHist, decryptRaw, loadHistory, deleteHistoryEntry,
       backupOpen, setBackupOpen, importOpen, setImportOpen, doExport, doImport,
       breachRunning, breachChecking, checkItemBreach, checkAllBreaches,
+      strengthMap, healthOpen, setHealthOpen, checkHealth,
       list, counts, adv, now, doLock,
     ],
   );
@@ -880,6 +955,7 @@ export function VaultApp() {
       <HistorySheet />
       <ExportSheet />
       <ImportSheet />
+      <HealthSheet />
       <ConfirmModal
         open={pendingDelete !== null}
         title={t("delete.title")}
