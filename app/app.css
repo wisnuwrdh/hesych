@@ -2067,3 +2067,39 @@ svg{display:block;flex-shrink:0}
   text-transform:uppercase;letter-spacing:.04em;
   margin:2px 0 4px;
 }
+
+/* ===== Share viewer + log ===== */
+.share-viewer{
+  min-height:100vh;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:0;padding:24px;
+  background:var(--bg, #0a0a0c);
+}
+.share-viewer-card{
+  width:100%;max-width:420px;padding:22px;border-radius:14px;
+  background:var(--surface);border:1px solid var(--border);
+}
+.share-viewer-msg{font-size:13px;color:var(--dim);text-align:center;padding:20px 0}
+.share-log-list{display:flex;flex-direction:column;gap:8px}
+.share-log-item{
+  display:flex;align-items:flex-start;gap:10px;
+  border:1px solid var(--border);border-radius:10px;
+  padding:10px 12px;background:var(--surface);
+}
+.share-log-main{flex:1;min-width:0}
+.share-log-title{font-size:12px;font-weight:600;color:var(--text)}
+.share-log-link{
+  font-size:10px;color:var(--dim);font-family:var(--mono);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;
+}
+.share-log-exp{font-size:10px;margin-top:4px}
+.share-log-del{
+  background:none;border:none;cursor:pointer;color:var(--dim);
+  padding:6px;border-radius:6px;flex-shrink:0;
+}
+.share-log-del:hover{color:var(--danger);background:var(--card)}
+.share-link-text{
+  font-family:var(--mono);font-size:11px;color:var(--text);
+  word-break:break-all;line-height:1.5;
+  background:var(--code-bg, #0d0d10);border:1px solid var(--border);
+  border-radius:8px;padding:10px 12px;
+}

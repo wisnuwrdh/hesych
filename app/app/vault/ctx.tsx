@@ -2,7 +2,14 @@
 
 import { createContext, useContext } from "react";
 import { t } from "../../../lib/i18n";
-import type { Category, CustomField, VaultItem } from "../../../lib/types";
+import type {
+  Category,
+  CustomField,
+  PasswordHistoryEntry,
+  ShareLogEntry,
+  VaultItem,
+} from "../../../lib/types";
+import type { ShareInclude } from "../../../lib/share";
 
 export type VaultFilter = "all" | "fav" | Category;
 
@@ -75,12 +82,27 @@ export interface VaultCtx {
   cpOpen: boolean;
   setCpOpen: (v: boolean) => void;
   changeMasterPw: (oldPw: string, newPw: string) => Promise<string | null>;
-  histItem: VaultItem | null;
+histItem: VaultItem | null;
   openHist: (item: VaultItem) => void;
   closeHist: () => void;
   decryptRaw: (b64: string) => Promise<string>;
-  loadHistory: (itemId: number) => Promise<import("../../../lib/types").PasswordHistoryEntry[]>;
+  loadHistory: (itemId: number) => Promise<PasswordHistoryEntry[]>;
   deleteHistoryEntry: (hid: number) => Promise<void>;
+  shareItem: VaultItem | null;
+  setShareItem: (i: VaultItem | null) => void;
+  shareOpen: boolean;
+  setShareOpen: (v: boolean) => void;
+  buildShareLink: (
+    item: VaultItem,
+    passphrase: string,
+    expHours: number,
+    incl: ShareInclude[],
+  ) => Promise<{ link: string } | { err: string }>;
+  shareLog: ShareLogEntry[];
+  loadShareLog: () => Promise<void>;
+  deleteShareLog: (slid: number) => Promise<void>;
+  shareLogOpen: boolean;
+  setShareLogOpen: (v: boolean) => void;
   backupOpen: boolean;
   setBackupOpen: (v: boolean) => void;
   importOpen: boolean;

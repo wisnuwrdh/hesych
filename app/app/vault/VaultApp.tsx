@@ -25,6 +25,7 @@ import {
   type EncryptedVaultRow,
 } from "../../../lib/vault";
 import { histAdd, openDB, dbPutItem, histGetAll, histDelete } from "../../../lib/db";
+import { shareLogAdd, shareLogAll, shareLogDelete } from "../../../lib/db";
 import { reencryptVault } from "../../../lib/master";
 import {
   exportMasterBackup,
@@ -38,6 +39,11 @@ import {
 } from "../../../lib/breach";
 import { scanVaultHealth, type HealthReport } from "../../../lib/health";
 import { scorePassword } from "../../../lib/password";
+import {
+  buildShareFragment,
+  type ShareInclude,
+} from "../../../lib/share";
+import type { ShareLogEntry } from "../../../lib/types";
 import type { ItemSaveInput } from "./ctx";
 import {
   disableBiometric,
@@ -63,6 +69,7 @@ import { ChangePwSheet } from "./cp-sheet";
 import { HistorySheet } from "./history-sheet";
 import { ExportSheet, ImportSheet } from "./backup-sheets";
 import { HealthSheet } from "./health-sheet";
+import { ShareSheet, ShareLogSheet } from "./share-sheets";
 
 type Phase = "locked" | "unlocked";
 
@@ -93,6 +100,10 @@ export function VaultApp() {
   const [breachChecking, setBreachChecking] = useState<Set<number>>(new Set());
   const [strengthMap, setStrengthMap] = useState<Map<number, number>>(new Map());
   const [healthOpen, setHealthOpen] = useState(false);
+  const [shareItem, setShareItem] = useState<VaultItem | null>(null);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareLog, setShareLog] = useState<ShareLogEntry[]>([]);
+  const [shareLogOpen, setShareLogOpen] = useState(false);
   const genTargetRef = useRef<((pw: string) => void) | null>(null);
 
   const keyRef = useRef<VaultKey | null>(null);
@@ -169,6 +180,27 @@ export function VaultApp() {
 
   // ===== unlock / create =====
 
+  const loadShareLog = useCallback(async () => {
+    const db = dbRef.current;
+    if (!db) return;
+    try {
+      setShareLog(await shareLogAll(db));
+    } catch {
+      setShareLog([]);
+    }
+  }, []);
+
+  const deleteShareLog = useCallback(async (slid: number) => {
+    const db = dbRef.current;
+    if (!db) return;
+    try {
+      await shareLogDelete(db, slid);
+      setShareLog((prev) => prev.filter((s) => s.slid !== slid));
+    } catch {
+      // ignore
+    }
+  }, []);
+
   const populateStrengths = useCallback(async (list: VaultItem[], key: VaultKey) => {
     if (list.length === 0) return;
     for (const item of list) {
@@ -202,7 +234,8 @@ export function VaultApp() {
     setRevealed(new Map());
     setPhase("unlocked");
     void populateStrengths(loaded, key);
-  }, [populateStrengths]);
+    void loadShareLog();
+  }, [populateStrengths, loadShareLog]);
 
   const handlePasswordSubmit = useCallback(
     async (pw: string, isSetup: boolean): Promise<boolean> => {
@@ -674,6 +707,55 @@ export function VaultApp() {
     [items],
   );
 
+  const buildShareLink = useCallback(
+    async (
+      item: VaultItem,
+      passphrase: string,
+      expHours: number,
+      incl: ShareInclude[],
+    ): Promise<{ link: string } | { err: string }> => {
+      const db = dbRef.current;
+      const key = keyRef.current;
+      if (!db || !key) return { err: "Vault closed" };
+      try {
+        const password = incl.includes("pw") ? await decryptPassword(item.id) : "";
+        const totp = incl.includes("totp") ? await decryptTotp(item.id) : "";
+        const username = incl.includes("user") ? item.username : "";
+        const notes = incl.includes("notes") ? item.notes : "";
+        const now = Date.now();
+        const payload = {
+          v: 1 as const,
+          iat: now,
+          exp: now + expHours * 3600 * 1000,
+          incl,
+          title: item.title,
+          username,
+          password,
+          notes,
+          totp,
+        };
+        const fragment = await buildShareFragment(payload, passphrase);
+        const link = `${window.location.origin}/share#${fragment}`;
+        try {
+          await shareLogAdd(db, {
+            itemId: item.id,
+            itemTitle: item.title,
+            link,
+            createdAt: now,
+            expTs: payload.exp,
+          });
+          void loadShareLog();
+        } catch {
+          // logging is best-effort
+        }
+        return { link };
+      } catch (e) {
+        return { err: e instanceof Error ? e.message : String(e) };
+      }
+    },
+    [decryptPassword, decryptTotp, loadShareLog],
+  );
+
   const copyPassword = useCallback(
     async (id: number) => {
       try {
@@ -916,6 +998,16 @@ export function VaultApp() {
       healthOpen,
       setHealthOpen,
       checkHealth,
+      shareItem,
+      setShareItem,
+      shareOpen,
+      setShareOpen,
+      buildShareLink,
+      shareLog,
+      loadShareLog,
+      deleteShareLog,
+      shareLogOpen,
+      setShareLogOpen,
     }),
     [
       items, filter, search, pendingDelete, pendingSecretLock, detailId,
@@ -927,6 +1019,8 @@ export function VaultApp() {
       backupOpen, setBackupOpen, importOpen, setImportOpen, doExport, doImport,
       breachRunning, breachChecking, checkItemBreach, checkAllBreaches,
       strengthMap, healthOpen, setHealthOpen, checkHealth,
+      shareItem, setShareItem, shareOpen, setShareOpen, buildShareLink,
+      shareLog, loadShareLog, deleteShareLog, shareLogOpen, setShareLogOpen,
       list, counts, adv, now, doLock,
     ],
   );
@@ -956,6 +1050,8 @@ export function VaultApp() {
       <ExportSheet />
       <ImportSheet />
       <HealthSheet />
+      <ShareSheet />
+      <ShareLogSheet />
       <ConfirmModal
         open={pendingDelete !== null}
         title={t("delete.title")}
