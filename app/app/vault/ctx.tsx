@@ -87,6 +87,10 @@ export interface VaultCtx {
   setImportOpen: (v: boolean) => void;
   doExport: (mode: "master" | "custom", pw?: string) => Promise<string | null>;
   doImport: (file: File, mode: "replace" | "merge", pw?: string) => Promise<string | null>;
+  breachRunning: boolean;
+  breachChecking: Set<number>;
+  checkItemBreach: (id: number) => Promise<void>;
+  checkAllBreaches: () => Promise<void>;
   list: VaultItem[];
   counts: Record<string, number>;
   itemCount: number;

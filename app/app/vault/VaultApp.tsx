@@ -31,6 +31,11 @@ import {
   exportCustomBackup,
   importBackup as importBackupJson,
 } from "../../../lib/backup";
+import {
+  checkBreach,
+  checkAllItems,
+  saveBreachResult,
+} from "../../../lib/breach";
 import type { ItemSaveInput } from "./ctx";
 import {
   disableBiometric,
@@ -81,6 +86,8 @@ export function VaultApp() {
   const [histItem, setHistItem] = useState<VaultItem | null>(null);
   const [backupOpen, setBackupOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [breachRunning, setBreachRunning] = useState(false);
+  const [breachChecking, setBreachChecking] = useState<Set<number>>(new Set());
   const genTargetRef = useRef<((pw: string) => void) | null>(null);
 
   const keyRef = useRef<VaultKey | null>(null);
@@ -533,6 +540,80 @@ export function VaultApp() {
     [enterVault],
   );
 
+  const updateItemMeta = useCallback(
+    (id: number, patch: Partial<VaultItem>) => {
+      setItems((prev) => prev.map((i) => (i.id === id ? { ...i, ...patch } : i)));
+    },
+    [],
+  );
+
+  const checkItemBreach = useCallback(
+    async (id: number) => {
+      const db = dbRef.current;
+      const key = keyRef.current;
+      const item = items.find((i) => i.id === id);
+      if (!db || !key || !item) return;
+      setBreachChecking((prev) => new Set(prev).add(id));
+      try {
+        const pw = await decryptWith(key, item.password);
+        const count = await checkBreach(pw);
+        const status = count > 0 ? 2 : 1;
+        const checkedAt = Date.now();
+        await saveBreachResult(db, key, id, status, checkedAt);
+        updateItemMeta(id, { breachStatus: status, breachCheckedAt: checkedAt });
+        setToast(
+          count > 0
+            ? { msg: t("breach.breachedSingle", { n: count }), type: "err" }
+            : { msg: t("breach.safeSingle"), type: "ok" },
+        );
+      } catch (e) {
+        setToast({
+          msg: t("breach.apiErr", { msg: e instanceof Error ? e.message : String(e) }),
+          type: "err",
+        });
+      } finally {
+        setBreachChecking((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      }
+    },
+    [items, updateItemMeta],
+  );
+
+  const checkAllBreaches = useCallback(
+    async () => {
+      const db = dbRef.current;
+      const key = keyRef.current;
+      if (!db || !key || items.length === 0) return;
+      setBreachRunning(true);
+      try {
+        const summary = await checkAllItems(db, key, items, undefined, (id, status) => {
+          updateItemMeta(id, { breachStatus: status, breachCheckedAt: Date.now() });
+        });
+        if (summary.failed === items.length) {
+          setToast({ msg: t("breach.offline"), type: "err" });
+        } else {
+          setToast(
+            summary.breached > 0
+              ? {
+                  msg: t("breach.done", {
+                    breached: summary.breached,
+                    safe: summary.safe,
+                  }),
+                  type: "warn",
+                }
+              : { msg: t("breach.doneAll"), type: "ok" },
+          );
+        }
+      } finally {
+        setBreachRunning(false);
+      }
+    },
+    [items, updateItemMeta],
+  );
+
   const copyPassword = useCallback(
     async (id: number) => {
       try {
@@ -746,6 +827,10 @@ export function VaultApp() {
       setImportOpen,
       doExport,
       doImport,
+      breachRunning,
+      breachChecking,
+      checkItemBreach,
+      checkAllBreaches,
       list,
       counts,
       itemCount: items.length,
@@ -766,6 +851,7 @@ export function VaultApp() {
       genOpen, useGenPassword, registerGenTarget, isPremium, cpOpen, changeMasterPw,
       histItem, openHist, closeHist, decryptRaw, loadHistory, deleteHistoryEntry,
       backupOpen, setBackupOpen, importOpen, setImportOpen, doExport, doImport,
+      breachRunning, breachChecking, checkItemBreach, checkAllBreaches,
       list, counts, adv, now, doLock,
     ],
   );

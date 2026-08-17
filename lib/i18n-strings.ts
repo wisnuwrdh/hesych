@@ -204,6 +204,7 @@ export const STRINGS = {
   "breach.apiErr": "Breach check failed: {msg}",
   "breach.offline": "No internet connection",
   "breach.checkSingle": "Check this password",
+  "breach.checkBtn": "Check",
   "totp.label": "2FA",
   "totp.copy": "Copy code",
   "totp.copied": "Copied!",

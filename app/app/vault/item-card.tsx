@@ -32,6 +32,9 @@ function BreachBadge({ item }: { item: VaultItem }) {
       </span>
     );
   }
+  if (item.breachStatus === 1) {
+    return <span className="breach-badge breach-safe">✓</span>;
+  }
   return null;
 }
 
@@ -309,6 +312,19 @@ function ItemDetails({ item }: { item: VaultItem }) {
             <span style={{ fontSize: 11 }}>History</span>
           </button>
         ) : null}
+        <button
+          className="act-btn-icon"
+          disabled={ctx.breachChecking.has(item.id)}
+          onClick={() => ctx.checkItemBreach(item.id)}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            <polyline points="9 12 11 14 15 10" />
+          </svg>{" "}
+          <span style={{ fontSize: 11 }}>
+            {ctx.breachChecking.has(item.id) ? "…" : t("breach.checkBtn")}
+          </span>
+        </button>
         <button
           className="act-btn-icon"
           style={item.favorite ? { color: "var(--yellow)" } : undefined}
