@@ -24,7 +24,7 @@ import {
   vaultSetFavorite,
   type EncryptedVaultRow,
 } from "../../../lib/vault";
-import { histAdd, openDB, dbPutItem, histGetAll, histDelete } from "../../../lib/db";
+import { histAdd, openDB, dbPutItem, histGetAll, histDelete, resetDBCache } from "../../../lib/db";
 import { shareLogAdd, shareLogAll, shareLogDelete } from "../../../lib/db";
 import { reencryptVault } from "../../../lib/master";
 import {
@@ -313,6 +313,7 @@ export function VaultApp() {
       dbRef.current = null;
     }
     keyRef.current = null;
+    resetDBCache(); // flush stale singleton so next openDB() creates a fresh connection
     disableBiometric();
     localStorage.removeItem("vault_salt");
     localStorage.removeItem("vault_ver");

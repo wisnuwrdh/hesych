@@ -54,7 +54,12 @@ export function openDB(): Promise<IDBDatabase> {
   return _dbPromise;
 }
 
-/** Reset the cached handle — only used in tests. */
+/** Reset the cached DB handle. Call after closing the DB (e.g. on vault reset). */
+export function resetDBCache(): void {
+  _dbPromise = null;
+}
+
+/** @deprecated use resetDBCache — kept for test compatibility */
 export function __resetDBForTests(): void {
   _dbPromise = null;
 }
