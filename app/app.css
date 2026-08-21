@@ -1493,6 +1493,7 @@ svg{display:block;flex-shrink:0}
 .cf-premium-gate{background:var(--accent-dim);border:1px solid #3a2f7a;border-radius:9px;padding:10px 12px;margin-top:6px;display:flex;align-items:center;justify-content:space-between;gap:10px}
 
 /* ===== TOTP ===== */
+.totp-row{
   margin-top:8px;
   background:var(--accent-dim);
   border:1px solid #3a2f7a;
