@@ -79,6 +79,10 @@ export function LockScreen({
         setMsg(t("lock.wrongPw"));
         setMsgType("err");
       }
+    } catch (err) {
+      console.error("onPasswordSubmit error", err);
+      setMsg(err instanceof Error ? err.message : t("lock.wrongPw"));
+      setMsgType("err");
     } finally {
       setWorking(false);
     }

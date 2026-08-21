@@ -247,11 +247,10 @@ export function VaultApp() {
           const key = await deriveKey(pw, salt);
           await writeVerifierForKey(key);
           const db = await openDB();
-          setFirstTime(false);
           await enterVault(db, key);
+          setFirstTime(false); // only set after vault is successfully open
           setLockout(resetAttempts());
           if (isBiometricSupported()) {
-            // wrapped for a future legacy bio unlock (PRF path needs an assertion)
             setBioSession(pw, null, false, { forceLegacy: true }).catch(() => {});
           }
           return true;
@@ -273,10 +272,11 @@ export function VaultApp() {
         await enterVault(db, key);
         setLockout(resetAttempts());
         const credId = getCredIdB64();
-        setBioSession(pw, credId, isPrfEnabled(), { forceLegacy: true }).catch(
-          () => {},
-        );
+        setBioSession(pw, credId, isPrfEnabled(), { forceLegacy: true }).catch(() => {});
         return true;
+      } catch (err) {
+        console.error("handlePasswordSubmit error", err);
+        throw err; // re-throw so lock-screen catch block shows the message
       } finally {
         occupiedRef.current = false;
       }
