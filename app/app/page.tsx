@@ -1,5 +1,5 @@
 import { AppEntrance } from "./vault/Entrance";
-import "./app.css";
+import "../app.css";
 
 export default function AppRoutePage() {
   return <AppEntrance />;
