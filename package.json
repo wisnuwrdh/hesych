@@ -9,7 +9,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "cf:build": "npx opennextjs-cloudflare build && node scripts/pages-postbuild.mjs",
+    "cf:build": "node scripts/stub-sharp.mjs && npx opennextjs-cloudflare build && node scripts/pages-postbuild.mjs",
     "cf:preview": "npx wrangler pages dev .open-next",
     "cf:deploy": "npx wrangler pages deploy .open-next"
   },
