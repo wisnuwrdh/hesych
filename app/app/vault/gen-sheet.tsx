@@ -123,7 +123,7 @@ export function GenSheet() {
 
   return (
     <>
-      <div className="modal-overlay show" id="genOverlay" />
+      <div className="overlay show" id="genOverlay" />
       <div className="sheet show" id="genSheet" ref={ref}>
         <div className="sheet-handle" />
         <div className="sheet-title">

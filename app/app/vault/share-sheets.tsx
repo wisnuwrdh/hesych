@@ -85,7 +85,7 @@ export function ShareSheet() {
 
   return (
     <>
-      <div className="modal-overlay show" onClick={() => ctx.setShareOpen(false)} />
+      <div className="overlay show" onClick={() => ctx.setShareOpen(false)} />
       <div className="sheet show" id="shareSheet">
         <div className="sheet-handle" />
         <div className="sheet-title">
@@ -229,7 +229,7 @@ export function ShareLogSheet() {
 
   return (
     <>
-      <div className="modal-overlay show" onClick={() => ctx.setShareLogOpen(false)} />
+      <div className="overlay show" onClick={() => ctx.setShareLogOpen(false)} />
       <div className="sheet show" id="shareLogSheet">
         <div className="sheet-handle" />
         <div className="sheet-title">

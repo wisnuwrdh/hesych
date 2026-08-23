@@ -63,7 +63,7 @@ export function ExportSheet() {
 
   return (
     <>
-      <div className="modal-overlay show" onClick={() => ctx.setBackupOpen(false)} />
+      <div className="overlay show" onClick={() => ctx.setBackupOpen(false)} />
       <div className="sheet show" id="encExportSheet">
         <SheetHead title={t("encExport.title")} onClose={() => ctx.setBackupOpen(false)} />
         <div style={{ fontSize: 12, color: "var(--dim)", margin: "4px 0 16px", lineHeight: 1.5 }}>
@@ -225,7 +225,7 @@ export function ImportSheet() {
 
   return (
     <>
-      <div className="modal-overlay show" onClick={() => ctx.setImportOpen(false)} />
+      <div className="overlay show" onClick={() => ctx.setImportOpen(false)} />
       <div className="sheet show" id="encImportSheet">
         <SheetHead title={t("import.title")} onClose={() => ctx.setImportOpen(false)} />
         <div style={{ fontSize: 12, color: "var(--dim)", margin: "4px 0 16px", lineHeight: 1.5 }}>

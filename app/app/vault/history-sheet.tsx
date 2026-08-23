@@ -67,7 +67,7 @@ export function HistorySheet() {
 
   return (
     <>
-      <div className="modal-overlay show" onClick={ctx.closeHist} />
+      <div className="overlay show" onClick={ctx.closeHist} />
       <div className="sheet show" id="historySheet">
         <div className="sheet-handle" />
         <div className="sheet-title">

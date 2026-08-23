@@ -95,7 +95,7 @@ export function HealthSheet() {
 
   return (
     <>
-      <div className="modal-overlay show" onClick={() => ctx.setHealthOpen(false)} />
+      <div className="overlay show" onClick={() => ctx.setHealthOpen(false)} />
       <div className="sheet show" id="healthSheet">
         <div className="sheet-handle" />
         <div className="sheet-title">

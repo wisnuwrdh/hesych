@@ -148,7 +148,7 @@ export function EditSheet() {
 
   return (
     <>
-      <div className="modal-overlay show" onClick={ctx.closeSheet} />
+      <div className="overlay show" onClick={ctx.closeSheet} />
       <div className="sheet show" id="itemSheet">
         <div className="sheet-handle" />
         <div className="sheet-title">
