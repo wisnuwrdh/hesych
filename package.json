@@ -9,9 +9,9 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-    "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload"
+    "cf:build": "npx @opennextjs/cloudflare build",
+    "cf:preview": "npx wrangler pages dev .open-next",
+    "cf:deploy": "npx wrangler pages deploy .open-next"
   },
   "dependencies": {
     "next": "16.3.1",
