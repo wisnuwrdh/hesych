@@ -1,13 +1,10 @@
 {
-  // Cloudflare Workers config for the @opennextjs/cloudflare adapter
-  // (official target of the adapter — Pages output is unreliable on v1.x).
+  // Cloudflare Pages config for the @opennextjs/cloudflare adapter.
+  // Build via `npm run cf:build` (adapter build + pages-postbuild shim),
+  // deploy via `npx wrangler pages deploy .open-next`.
   "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
   "name": "hesych",
-  "main": ".open-next/worker.js",
   "compatibility_date": "2026-07-18",
   "compatibility_flags": ["nodejs_compat"],
-  "assets": {
-    "directory": ".open-next/assets",
-    "binding": "ASSETS"
-  }
+  "pages_build_output_dir": ".open-next"
 }
