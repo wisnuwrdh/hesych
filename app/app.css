@@ -235,7 +235,9 @@ svg{display:block;flex-shrink:0}
 .reset-link:hover{color:var(--danger)}
 
 /* ===== APP ===== */
-#app{display:none;flex-direction:column;height:100dvh;overflow:hidden;width:100%;position:relative;}
+/* React controls mounting conditionally — the legacy JS toggle that needed
+   display:none here is gone; the shell must be visible whenever mounted. */
+#app{display:flex;flex-direction:column;height:100dvh;overflow:hidden;width:100%;position:relative;}
 
 .appbar{
   display:flex;align-items:center;
