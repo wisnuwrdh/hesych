@@ -34,19 +34,28 @@ renameSync(workerPath, pagesWorkerPath);
 console.log("  ✓ _worker.js ready");
 
 // [2/4] serve static assets via env.ASSETS before handing off to Next server
-const ANCHOR = "            // - `Request`s are handled by the Next server";
-const INSERT = [
-  "            // Serve static assets from env.ASSETS (Cloudflare Pages)",
-  '            if (url.pathname.startsWith("/_next/static/") || !url.pathname.startsWith("/api/")) {',
-  "                const asset = await env.ASSETS.fetch(request);",
-  "                if (asset.status !== 404) return asset;",
-  "            }",
-  "            ",
-].join("\n");
+// Hardened: self-contained URL parsing, guarded binding, try/catch fallthrough
+// — a failure here must degrade to normal SSR handling, never 500 the request.
+const ANCHOR_RE =
+  /^\s*\/\/\s*-?\s*`?Request`s? are handled by the Next server.*$/m;
+const INSERT = `            // Serve static assets from env.ASSETS (Cloudflare Pages)
+            try {
+                const __pUrl = new URL(request.url);
+                if (
+                    typeof env !== "undefined" &&
+                    env.ASSETS &&
+                    (__pUrl.pathname.startsWith("/_next/static/") ||
+                        !__pUrl.pathname.startsWith("/api/"))
+                ) {
+                    const __asset = await env.ASSETS.fetch(request);
+                    if (__asset && __asset.status !== 404) return __asset;
+                }
+            } catch (_) {}
+`;
 
 let code = readFileSync(pagesWorkerPath, "utf-8");
-if (code.includes(ANCHOR)) {
-  code = code.replace(ANCHOR, INSERT + ANCHOR);
+if (ANCHOR_RE.test(code)) {
+  code = code.replace(ANCHOR_RE, INSERT + ANCHOR_RE.exec(code)[0]);
   writeFileSync(pagesWorkerPath, code);
   console.log("  ✓ injected env.ASSETS static serving");
 } else {
