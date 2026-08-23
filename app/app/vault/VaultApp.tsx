@@ -59,7 +59,7 @@ import { isPasswordOld } from "../../../lib/format";
 import { isItemSecretLocked } from "../../../lib/secretlock";
 import type { VaultItem } from "../../../lib/types";
 import { LockScreen } from "./lock-screen";
-import { ConfirmModal, ToastHost } from "./ui";
+import { ConfirmModal, ToastHost, showGlobalToast } from "./ui";
 import { SecretLockModal } from "./secret-lock-modal";
 import { AppShell } from "./shell";
 import { VaultCtx, type VaultFilter, DEFAULT_ADV, type AdvFilter } from "./ctx";
@@ -111,6 +111,13 @@ export function VaultApp() {
   const lastActiveRef = useRef(0);
   const occupiedRef = useRef(false);
 
+  /** Auto-dismissing toast (2.6s) — never call raw setToast directly. */
+  const pushToast = useCallback(
+    (msg: string, type: "ok" | "err" | "warn" = "ok") =>
+      showGlobalToast(msg, type, setToast),
+    [],
+  );
+
   const copyText = useCallback(
     async (text: string): Promise<boolean> => {
       try {
@@ -145,12 +152,17 @@ export function VaultApp() {
       dbRef.current.close();
       dbRef.current = null;
     }
+    // Flush the cached openDB() promise — it resolves to the connection we
+    // just closed; reusing it throws "The database connection is closing".
+    resetDBCache();
     setPhase("locked");
   }, []);
 
   // Idle + tab-hidden auto-lock.
   useEffect(() => {
     if (phase !== "unlocked") return;
+    lastActiveRef.current = Date.now();
+    let hideTimer: ReturnType<typeof setTimeout> | null = null;
     const mark = () => {
       lastActiveRef.current = Date.now();
     };
@@ -159,15 +171,24 @@ export function VaultApp() {
     const tick = setInterval(() => {
       setNow(Date.now());
       if (Date.now() - lastActiveRef.current > IDLE_LOCK_MS) {
-        setToast({ msg: t("toast.idleLock"), type: "warn" });
+        pushToast(t("toast.idleLock"), "warn");
         doLock();
       }
     }, 1000);
     const onVis = () => {
       setNow(Date.now());
       if (document.hidden) {
-        setToast({ msg: t("toast.tabLock"), type: "warn" });
-        doLock();
+        // Debounce: momentary hides (app switch during key derivation,
+        // rotation) must not insta-lock the vault.
+        hideTimer = setTimeout(() => {
+          if (document.hidden) {
+            pushToast(t("toast.tabLock"), "warn");
+            doLock();
+          }
+        }, 600);
+      } else if (hideTimer) {
+        clearTimeout(hideTimer);
+        hideTimer = null;
       }
     };
     document.addEventListener("visibilitychange", onVis);
@@ -175,8 +196,9 @@ export function VaultApp() {
       events.forEach((e) => window.removeEventListener(e, mark));
       clearInterval(tick);
       document.removeEventListener("visibilitychange", onVis);
+      if (hideTimer) clearTimeout(hideTimer);
     };
-  }, [phase, doLock]);
+  }, [phase, doLock, pushToast]);
 
   // ===== unlock / create =====
 
@@ -289,7 +311,7 @@ export function VaultApp() {
       const salt = getSalt();
       const key = await deriveKey(pw, salt);
       if (!(await checkVerifier(pw, salt))) {
-        setToast({ msg: t("bio.failed"), type: "err" });
+        pushToast(t("bio.failed"), "err");
         return;
       }
       const db = await openDB();
@@ -301,7 +323,7 @@ export function VaultApp() {
         setBioSession(pw, null, false, { forceLegacy: true }).catch(() => {});
       }
     },
-    [enterVault],
+    [enterVault, pushToast],
   );
 
   // ===== reset =====
@@ -317,6 +339,7 @@ export function VaultApp() {
     disableBiometric();
     localStorage.removeItem("vault_salt");
     localStorage.removeItem("vault_ver");
+    localStorage.removeItem("vault_ver_magic");
     localStorage.removeItem("vault_license");
     localStorage.removeItem("vault_license_verified");
     localStorage.removeItem("vault_license_at");
@@ -338,8 +361,8 @@ export function VaultApp() {
     setLockout(resetAttempts());
     setFirstTime(true);
     setPhase("locked");
-    setToast({ msg: t("lock.resetDone"), type: "ok" });
-  }, []);
+    pushToast(t("lock.resetDone"), "ok");
+  }, [pushToast]);
 
   // ===== item actions =====
 
@@ -482,7 +505,7 @@ export function VaultApp() {
                 return next;
               });
             }
-            setToast({ msg: t("toast.saved"), type: "ok" });
+            pushToast(t("toast.saved"), "ok");
             return true;
           }
           const row: EncryptedVaultRow = await buildEncryptedRow(
@@ -515,15 +538,15 @@ export function VaultApp() {
             next.set(id, score);
             return next;
           });
-          setToast({ msg: t("toast.saved"), type: "ok" });
+          pushToast(t("toast.saved"), "ok");
           return true;
         });
       } catch {
-        setToast({ msg: t("toast.saveFail"), type: "err" });
+        pushToast(t("toast.saveFail"), "err");
         return false;
       }
     },
-    [withKey, items, isPremium],
+    [withKey, items, isPremium, pushToast],
   );
 
   const changeMasterPw = useCallback(
@@ -637,16 +660,15 @@ export function VaultApp() {
         const checkedAt = Date.now();
         await saveBreachResult(db, key, id, status, checkedAt);
         updateItemMeta(id, { breachStatus: status, breachCheckedAt: checkedAt });
-        setToast(
-          count > 0
-            ? { msg: t("breach.breachedSingle", { n: count }), type: "err" }
-            : { msg: t("breach.safeSingle"), type: "ok" },
+        pushToast(
+          count > 0 ? t("breach.breachedSingle", { n: count }) : t("breach.safeSingle"),
+          count > 0 ? "err" : "ok",
         );
       } catch (e) {
-        setToast({
-          msg: t("breach.apiErr", { msg: e instanceof Error ? e.message : String(e) }),
-          type: "err",
-        });
+        pushToast(
+          t("breach.apiErr", { msg: e instanceof Error ? e.message : String(e) }),
+          "err",
+        );
       } finally {
         setBreachChecking((prev) => {
           const next = new Set(prev);
@@ -655,7 +677,7 @@ export function VaultApp() {
         });
       }
     },
-    [items, updateItemMeta],
+    [items, updateItemMeta, pushToast],
   );
 
   const checkAllBreaches = useCallback(
@@ -669,25 +691,20 @@ export function VaultApp() {
           updateItemMeta(id, { breachStatus: status, breachCheckedAt: Date.now() });
         });
         if (summary.failed === items.length) {
-          setToast({ msg: t("breach.offline"), type: "err" });
-        } else {
-          setToast(
-            summary.breached > 0
-              ? {
-                  msg: t("breach.done", {
-                    breached: summary.breached,
-                    safe: summary.safe,
-                  }),
-                  type: "warn",
-                }
-              : { msg: t("breach.doneAll"), type: "ok" },
+          pushToast(t("breach.offline"), "err");
+        } else if (summary.breached > 0) {
+          pushToast(
+            t("breach.done", { breached: summary.breached, safe: summary.safe }),
+            "warn",
           );
+        } else {
+          pushToast(t("breach.doneAll"));
         }
       } finally {
         setBreachRunning(false);
       }
     },
-    [items, updateItemMeta],
+    [items, updateItemMeta, pushToast],
   );
 
   const checkHealth = useCallback(
@@ -762,36 +779,36 @@ export function VaultApp() {
       try {
         const pw = await decryptPassword(id);
         if (!pw) return;
-        if (await copyText(pw)) setToast({ msg: t("toast.copiedPw"), type: "ok" });
-        else setToast({ msg: t("toast.copyFail"), type: "err" });
+        if (await copyText(pw)) pushToast(t("toast.copiedPw"), "ok");
+        else pushToast(t("toast.copyFail"), "err");
       } catch {
-        setToast({ msg: t("toast.decryptFailed"), type: "err" });
+        pushToast(t("toast.decryptFailed"), "err");
       }
     },
-    [decryptPassword, copyText],
+    [decryptPassword, copyText, pushToast],
   );
 
   const copyUsername = useCallback(
     async (id: number) => {
       const item = items.find((i) => i.id === id);
       if (!item) return;
-      if (await copyText(item.username)) setToast({ msg: t("toast.copiedUser"), type: "ok" });
-      else setToast({ msg: t("toast.copyFail"), type: "err" });
+      if (await copyText(item.username)) pushToast(t("toast.copiedUser"), "ok");
+      else pushToast(t("toast.copyFail"), "err");
     },
-    [items, copyText],
+    [items, copyText, pushToast],
   );
 
   const copyField = useCallback(
     async (id: number, idx: number) => {
       try {
         const v = await decryptField(id, idx);
-        if (await copyText(v)) setToast({ msg: t("cf.copied"), type: "ok" });
-        else setToast({ msg: t("toast.copyFail"), type: "err" });
+        if (await copyText(v)) pushToast(t("cf.copied"), "ok");
+        else pushToast(t("toast.copyFail"), "err");
       } catch {
-        setToast({ msg: t("toast.decryptFailed"), type: "err" });
+        pushToast(t("toast.decryptFailed"), "err");
       }
     },
-    [decryptField, copyText],
+    [decryptField, copyText, pushToast],
   );
 
   const toggleReveal = useCallback(
@@ -814,16 +831,16 @@ export function VaultApp() {
           return next;
         });
       } catch {
-        setToast({ msg: t("toast.decryptErr"), type: "err" });
+        pushToast(t("toast.decryptErr"), "err");
       }
     },
-    [decryptPassword, revealed],
+    [decryptPassword, revealed, pushToast],
   );
 
   const toggleExpand = useCallback(
     (id: number) => {
       if (isItemSecretLocked(id)) {
-        setToast({ msg: t("toast.itemLocked"), type: "warn" });
+        pushToast(t("toast.itemLocked"), "warn");
         return;
       }
       if (window.innerWidth >= 768) {
@@ -837,7 +854,7 @@ export function VaultApp() {
         return next;
       });
     },
-    [],
+    [pushToast],
   );
 
   const toggleFav = useCallback(
@@ -849,9 +866,9 @@ export function VaultApp() {
         await vaultSetFavorite(db, id, favorite);
       });
       setItems((prev) => prev.map((i) => (i.id === id ? { ...i, favorite } : i)));
-      setToast({ msg: favorite ? t("toast.favAdded") : t("toast.favRemoved"), type: "ok" });
+      pushToast(favorite ? t("toast.favAdded") : t("toast.favRemoved"), "ok");
     },
-    [items, withKey],
+    [items, withKey, pushToast],
   );
 
   const confirmDelete = useCallback(async () => {
@@ -861,9 +878,9 @@ export function VaultApp() {
     });
     setItems((prev) => prev.filter((i) => i.id !== pendingDelete.id));
     if (detailId === pendingDelete.id) setDetailId(null);
-    setToast({ msg: t("toast.deleted"), type: "ok" });
+    pushToast(t("toast.deleted"), "ok");
     setPendingDelete(null);
-  }, [pendingDelete, withKey, detailId]);
+  }, [pendingDelete, withKey, detailId, pushToast]);
 
   // ===== derived lists =====
 
@@ -1038,7 +1055,7 @@ export function VaultApp() {
           onPasswordSubmit={handlePasswordSubmit}
           onBioUnlock={handleBioUnlock}
           onReset={() => setResetOpen(true)}
-          showToast={(msg, type = "ok") => setToast({ msg, type })}
+          showToast={pushToast}
         />
       ) : (
         <AppShell onLock={doLock} bioOn={bioAvailable} />
@@ -1076,7 +1093,7 @@ export function VaultApp() {
       <SecretLockModal
         itemId={pendingSecretLock?.id ?? null}
         onClose={() => setPendingSecretLock(null)}
-        onLocked={() => setToast({ msg: t("secretLock.whatTitle"), type: "ok" })}
+        onLocked={() => pushToast(t("secretLock.whatTitle"), "ok")}
       />
       <ToastHost state={toast} />
     </VaultCtx.Provider>
