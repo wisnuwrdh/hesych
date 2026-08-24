@@ -56,6 +56,7 @@ import {
   getCredIdB64,
 } from "../../../lib/bio";
 import { isPasswordOld } from "../../../lib/format";
+import { isEnabled as localBackupEnabled, writeSnapshot as writeLocalSnapshot } from "../../../lib/localbackup";
 import { isItemSecretLocked } from "../../../lib/secretlock";
 import type { VaultItem } from "../../../lib/types";
 import { LockScreen } from "./lock-screen";
@@ -117,6 +118,18 @@ export function VaultApp() {
       showGlobalToast(msg, type, setToast),
     [],
   );
+
+  // Debounced encrypted snapshot to the user's chosen local folder.
+  const lbTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const queueLocalBackup = useCallback(() => {
+    if (!localBackupEnabled()) return;
+    if (lbTimer.current) clearTimeout(lbTimer.current);
+    lbTimer.current = setTimeout(() => {
+      const db = dbRef.current;
+      if (!db) return;
+      writeLocalSnapshot().catch((e) => console.warn("local backup:", e));
+    }, 5000);
+  }, []);
 
   const copyText = useCallback(
     async (text: string): Promise<boolean> => {
@@ -506,6 +519,7 @@ export function VaultApp() {
               });
             }
             pushToast(t("toast.saved"), "ok");
+            queueLocalBackup();
             return true;
           }
           const row: EncryptedVaultRow = await buildEncryptedRow(
@@ -538,6 +552,7 @@ export function VaultApp() {
             next.set(id, score);
             return next;
           });
+          queueLocalBackup();
           pushToast(t("toast.saved"), "ok");
           return true;
         });
@@ -546,7 +561,7 @@ export function VaultApp() {
         return false;
       }
     },
-    [withKey, items, isPremium, pushToast],
+    [withKey, items, isPremium, pushToast, queueLocalBackup],
   );
 
   const changeMasterPw = useCallback(
@@ -877,10 +892,11 @@ export function VaultApp() {
       await vaultDeleteItem(db, pendingDelete.id);
     });
     setItems((prev) => prev.filter((i) => i.id !== pendingDelete.id));
+    queueLocalBackup();
     if (detailId === pendingDelete.id) setDetailId(null);
     pushToast(t("toast.deleted"), "ok");
     setPendingDelete(null);
-  }, [pendingDelete, withKey, detailId, pushToast]);
+  }, [pendingDelete, withKey, detailId, pushToast, queueLocalBackup]);
 
   // ===== derived lists =====
 

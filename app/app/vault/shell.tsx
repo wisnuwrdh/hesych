@@ -13,6 +13,15 @@ import {
   type DeviceRow,
 } from "../../../lib/license";
 import { getDeviceId } from "../../../lib/device";
+import {
+  disableLocalBackup,
+  fsSupported,
+  isEnabled as lbEnabled,
+  lastBackupAt,
+  pickBackupFolder,
+  reminderDue,
+  writeSnapshot,
+} from "../../../lib/localbackup";
 import { renderHtmlKey } from "./ui";
 import { DetailPanel, ItemCard } from "./item-card";
 import { FILTERS, useVault, type VaultFilter } from "./ctx";
@@ -188,10 +197,12 @@ function OverflowMenu({
   onLock,
   pro,
   onOpenLicense,
+  onOpenBackup,
 }: {
   onLock: () => void;
   pro: boolean;
   onOpenLicense: () => void;
+  onOpenBackup: () => void;
 }) {
   const ctx = useVault();
   const [open, setOpen] = useState(false);
@@ -210,7 +221,13 @@ function OverflowMenu({
       </button>
       {open ? (
         <div className="overflow-dropdown">
-          <button className="overflow-item" onClick={() => { setOpen(false); ctx.setCpOpen(true); }}>
+          <button className="overflow-item" onClick={() => { setOpen(false); onOpenBackup(); }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+            </svg>
+            <span>{t("lb.menuItem")}</span>
+          </button>
+                    <button className="overflow-item" onClick={() => { setOpen(false); ctx.setCpOpen(true); }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="8" r="4" />
               <path d="M6 20v-1a6 6 0 0 1 12 0v1" />
@@ -299,7 +316,9 @@ function OverflowMenu({
 export function AppShell({ onLock, bioOn }: { onLock: () => void; bioOn: boolean }) {
   const ctx = useVault();
   const [licOpen, setLicOpen] = useState(false);
+  const [lbOpen, setLbOpen] = useState(false);
   const pro = ctx.isPremium();
+  const showLbReminder = reminderDue(ctx.itemCount);
   const desktopCount = ctx.counts[ctx.filter] ?? ctx.list.length;
 
   const chipLabel = (key: VaultFilter) =>
@@ -318,6 +337,17 @@ export function AppShell({ onLock, bioOn }: { onLock: () => void; bioOn: boolean
     <div id="app">
       <Sidebar />
       <div className="main-pane">
+        {showLbReminder ? (
+          <div style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 12px", background:"#2a1e08", color:"var(--warn)", fontSize:11, borderBottom:"1px solid #3a2f00" }}>
+            <span style={{ flex:1 }}>{t("lb.reminder")}</span>
+            <button className="act-btn" style={{ flex:"0 0 auto", padding:"4px 10px" }} onClick={() => setLbOpen(true)}>
+              {t("lb.enableAction")}
+            </button>
+            <button className="icon-btn" aria-label="dismiss" onClick={() => sessionStorage.setItem("lb_reminder_dismissed","1")}>
+              <XIcon width={12} height={12} />
+            </button>
+          </div>
+        ) : null}
         <div className="appbar">
           <div className="app-title">
             <img src="/logo-dark.webp" className="logo-img logo-img-dark" alt="" width="22" height="22" />
@@ -339,10 +369,12 @@ export function AppShell({ onLock, bioOn }: { onLock: () => void; bioOn: boolean
               <LockIcon width={15} height={15} />
             </button>
             <OverflowMenu
+              onOpenBackup={() => setLbOpen(true)}
               onLock={onLock}
               pro={pro}
               onOpenLicense={() => setLicOpen(true)}
             />
+            {lbOpen ? <LocalBackupModal onClose={() => setLbOpen(false)} /> : null}
             {licOpen ? <LicenseModal onClose={() => setLicOpen(false)} /> : null}
           </div>
         </div>
@@ -640,4 +672,113 @@ function LoadDevicesOnMount({ onReady }: { onReady: () => void }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return null;
+}
+
+// ===== LOCAL AUTO-BACKUP (encrypted snapshot to a user-chosen folder) =====
+
+function LocalBackupModal({ onClose }: { onClose: () => void }) {
+  const supported = fsSupported();
+  const enabled = lbEnabled();
+  const [last, setLast] = useState(lastBackupAt());
+  const [savedFlash, setSavedFlash] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const refresh = () => setLast(lastBackupAt());
+
+  const pickAndEnable = async () => {
+    setBusy(true);
+    const res = await pickBackupFolder();
+    if (res.ok) {
+      try {
+        await writeSnapshot();
+      } catch (e) {
+        console.warn("local backup:", e);
+      }
+      refresh();
+      setSavedFlash(true);
+      setTimeout(() => setSavedFlash(false), 2500);
+    }
+    setBusy(false);
+  };
+
+  const backupNow = async () => {
+    setBusy(true);
+    try {
+      await writeSnapshot();
+      refresh();
+      setSavedFlash(true);
+      setTimeout(() => setSavedFlash(false), 2500);
+    } catch (e) {
+      console.warn("local backup:", e);
+    }
+    setBusy(false);
+  };
+
+  return (
+    <div className="modal-overlay show" onClick={onClose}>
+      <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+        <h3 className="modal-title">{t("lb.title")}</h3>
+        {!supported ? (
+          <>
+            <p className="modal-desc">{t("lb.unsupported")}</p>
+          </>
+        ) : (
+          <>
+            <p className="modal-desc">{t("lb.desc")}</p>
+            <p className="modal-desc" style={{ marginBottom: 12 }}>
+              <strong>{enabled ? t("lb.enabledOn") : t("lb.enabledOff")}</strong>
+              {" · "}
+              {t("lb.lastBackup")}:{" "}
+              <span style={{ fontFamily: "var(--mono)" }}>
+                {last ? new Date(last).toLocaleString() : t("lb.never")}
+              </span>
+            </p>
+            {savedFlash ? (
+              <div style={{ fontSize: 12, color: "var(--green)", marginBottom: 8 }}>
+                {t("lb.saved")}
+              </div>
+            ) : null}
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <button
+                className="btn-primary"
+                style={{ justifyContent: "center", display: "flex" }}
+                disabled={busy}
+                onClick={() => void pickAndEnable()}
+              >
+                {t("lb.pickFolder")}
+              </button>
+              {enabled ? (
+                <>
+                  <button
+                    className="btn-cancel"
+                    style={{ justifyContent: "center", display: "flex" }}
+                    disabled={busy}
+                    onClick={() => void backupNow()}
+                  >
+                    {t("lb.backupNow")}
+                  </button>
+                  <button
+                    className="act-btn del"
+                    style={{ justifyContent: "center", display: "flex" }}
+                    disabled={busy}
+                    onClick={() => {
+                      disableLocalBackup();
+                      refresh();
+                    }}
+                  >
+                    {t("lb.turnOff")}
+                  </button>
+                </>
+              ) : null}
+            </div>
+          </>
+        )}
+        <div className="modal-actions">
+          <button className="btn-cancel" style={{ width: "100%" }} onClick={onClose}>
+            {t("delete.cancelBtn")}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }

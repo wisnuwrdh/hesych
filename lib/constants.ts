@@ -1,9 +1,10 @@
 // ===== IndexedDB (must stay byte-compatible with legacy VaultDB v6) =====
 export const DB_NAME = "VaultDB";
-export const DB_VER = 6;
+export const DB_VER = 7;
 export const STORE_ITEMS = "items";
 export const STORE_HISTORY = "pw_history";
 export const STORE_SHARE_LOG = "share_log";
+export const STORE_HANDLES = "handles";
 
 export const HIST_MAX = 10;
 export const ROW_META_V = 6;
@@ -36,6 +37,8 @@ export const STORAGE_KEYS = {
   licenseVerified: "vault_license_verified",
   licenseAt: "vault_license_at",
   licenseEmail: "vault_license_email",
+  lastLocalBackup: "hesych_last_backup",
+  localBackupOn: "hesych_local_backup_on",
   syncTs: "hesych_sync_ts",
   bioCredId: "vault_bio_cred_id",
   bioEnabled: "vault_bio_enabled",

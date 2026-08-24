@@ -5,6 +5,7 @@ import {
   DB_NAME,
   DB_VER,
   HIST_MAX,
+  STORE_HANDLES,
   STORE_HISTORY,
   STORE_ITEMS,
   STORE_SHARE_LOG,
@@ -46,6 +47,9 @@ export function openDB(): Promise<IDBDatabase> {
           autoIncrement: true,
         });
         sl.createIndex("itemId", "itemId", { unique: false });
+      }
+      if (!d.objectStoreNames.contains(STORE_HANDLES)) {
+        d.createObjectStore(STORE_HANDLES);
       }
     };
     req.onsuccess = () => resolve(req.result);
