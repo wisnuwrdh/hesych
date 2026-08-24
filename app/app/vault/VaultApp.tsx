@@ -263,6 +263,11 @@ export function VaultApp() {
     }
     keyRef.current = key;
     dbRef.current = db;
+    // Sweep any stale modal state so nothing from the lock screen
+    // (e.g. a stray "Reset Vault?" confirm) leaks into the open vault.
+    setResetOpen(false);
+    setPendingDelete(null);
+    setPendingSecretLock(null);
     setItems(loaded);
     setStrengthMap(new Map());
     setExpanded(new Set());
@@ -1096,16 +1101,18 @@ export function VaultApp() {
         onConfirm={confirmDelete}
         onCancel={() => setPendingDelete(null)}
       />
-      <ConfirmModal
-        open={resetOpen}
-        title="Reset Vault?"
-        desc={t("lock.resetConfirm")}
-        confirmLabel="Yes, Reset"
-        cancelLabel="Cancel"
-        danger
-        onConfirm={doReset}
-        onCancel={() => setResetOpen(false)}
-      />
+      {phase === "locked" ? (
+        <ConfirmModal
+          open={resetOpen}
+          title="Reset Vault?"
+          desc={t("lock.resetConfirm")}
+          confirmLabel="Yes, Reset"
+          cancelLabel="Cancel"
+          danger
+          onConfirm={doReset}
+          onCancel={() => setResetOpen(false)}
+        />
+      ) : null}
       <SecretLockModal
         itemId={pendingSecretLock?.id ?? null}
         onClose={() => setPendingSecretLock(null)}
