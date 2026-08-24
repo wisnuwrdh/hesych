@@ -155,8 +155,8 @@ export function LockScreen({
               onKeyDown={(e) => e.key === "Enter" && doSubmit()}
             />
             <button
-              className="eye-btn"
               type="button"
+              className="eye-btn"
               aria-label={pwVisible ? "Hide" : "Show"}
               onClick={() => setPwVisible((v) => !v)}
             >
@@ -217,6 +217,7 @@ export function LockScreen({
 
         {showBio && (
           <button
+            type="button"
             className="btn-bio"
             id="bioBtn"
             disabled={locked || bioBusy}
@@ -238,6 +239,7 @@ export function LockScreen({
         </div>
 
         <button
+          type="button"
           className="btn-primary"
           id="unlockBtn"
           disabled={locked || working}
@@ -253,7 +255,7 @@ export function LockScreen({
         </button>
 
         {!firstTime && (
-          <button className="reset-link" id="resetLink" onClick={onReset}>
+          <button type="button" className="reset-link" id="resetLink" onClick={onReset}>
             <svg
               width="12"
               height="12"
