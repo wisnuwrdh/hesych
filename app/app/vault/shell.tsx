@@ -3,6 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import { t } from "../../../lib/i18n";
 import { STORAGE_KEYS } from "../../../lib/constants";
+import {
+  activate as activateLicense,
+  deactivate as deactivateLicense,
+  getMeta as getLicenseMeta,
+  isActive as licenseIsActive,
+} from "../../../lib/license";
 import { renderHtmlKey } from "./ui";
 import { DetailPanel, ItemCard } from "./item-card";
 import { FILTERS, useVault, type VaultFilter } from "./ctx";
@@ -174,7 +180,15 @@ function EmptyState() {
   );
 }
 
-function OverflowMenu({ onLock }: { onLock: () => void }) {
+function OverflowMenu({
+  onLock,
+  pro,
+  onOpenLicense,
+}: {
+  onLock: () => void;
+  pro: boolean;
+  onOpenLicense: () => void;
+}) {
   const ctx = useVault();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -243,6 +257,31 @@ function OverflowMenu({ onLock }: { onLock: () => void }) {
             </svg>
             <span>{t("share.logTitle")}</span>
           </button>
+          {!pro ? (
+            <>
+              <a className="overflow-item" href="/upgrade" style={{ display: "flex" }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                </svg>
+                <span>{t("premium.menuItem")}</span>
+              </a>
+              <button className="overflow-item" onClick={() => { setOpen(false); onOpenLicense(); }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" />
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
+                <span>{t("premium.enterKey")}</span>
+              </button>
+            </>
+          ) : (
+            <button className="overflow-item" onClick={() => { setOpen(false); onOpenLicense(); }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+              <span>{t("premium.manageItem")}</span>
+            </button>
+          )}
           <button className="overflow-item" onClick={onLock}>
             <LockIcon width={14} height={14} />
             <span>{t("app.lockTitle")}</span>
@@ -255,6 +294,8 @@ function OverflowMenu({ onLock }: { onLock: () => void }) {
 
 export function AppShell({ onLock, bioOn }: { onLock: () => void; bioOn: boolean }) {
   const ctx = useVault();
+  const [licOpen, setLicOpen] = useState(false);
+  const pro = ctx.isPremium();
   const desktopCount = ctx.counts[ctx.filter] ?? ctx.list.length;
 
   const chipLabel = (key: VaultFilter) =>
@@ -293,7 +334,12 @@ export function AppShell({ onLock, bioOn }: { onLock: () => void; bioOn: boolean
             <button className="icon-btn" id="headerLockBtn" onClick={onLock} title={t("app.lockTitle")}>
               <LockIcon width={15} height={15} />
             </button>
-            <OverflowMenu onLock={onLock} />
+            <OverflowMenu
+              onLock={onLock}
+              pro={pro}
+              onOpenLicense={() => setLicOpen(true)}
+            />
+            {licOpen ? <LicenseModal onClose={() => setLicOpen(false)} /> : null}
           </div>
         </div>
 
@@ -348,6 +394,132 @@ export function AppShell({ onLock, bioOn }: { onLock: () => void; bioOn: boolean
           <line x1="5" y1="12" x2="19" y2="12" />
         </svg>
       </button>
+    </div>
+  );
+}
+// ===== LICENSE (Premium activation / management) =====
+
+function LicenseModal({ onClose }: { onClose: () => void }) {
+  const meta = getLicenseMeta();
+  const active = meta !== null && licenseIsActive();
+  const [key, setKey] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [errKey, setErrKey] = useState<string | null>(null);
+  const [done, setDone] = useState<null | "activated" | "removed">(null);
+
+  const doActivate = async () => {
+    if (!key.trim() || busy) return;
+    setBusy(true);
+    setErrKey(null);
+    const res = await activateLicense(key);
+    setBusy(false);
+    if (!res.ok) {
+      setErrKey(res.error ?? "premium.invalidKey");
+      return;
+    }
+    setDone("activated");
+  };
+
+  return (
+    <div className="modal-overlay show" onClick={onClose}>
+      <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+        {done === "activated" ? (
+          <>
+            <h3 className="modal-title">{t("premium.activeTitle")}</h3>
+            <p className="modal-desc">{t("premium.activeDesc")}</p>
+            <div className="modal-actions">
+              <button className="btn-primary" style={{ width: "100%" }} onClick={onClose}>
+                OK
+              </button>
+            </div>
+          </>
+        ) : done === "removed" ? (
+          <>
+            <h3 className="modal-title">{t("premium.manageItem")}</h3>
+            <p className="modal-desc">{t("premium.deactivated")}</p>
+            <div className="modal-actions">
+              <button className="btn-primary" style={{ width: "100%" }} onClick={onClose}>
+                OK
+              </button>
+            </div>
+          </>
+        ) : active ? (
+          <>
+            <h3 className="modal-title">{t("premium.activeTitle")}</h3>
+            <p className="modal-desc">
+              {t("premium.activeSince").replace(
+                "{date}",
+                new Date(meta.since).toLocaleDateString(),
+              )}
+              <br />
+              <span style={{ fontFamily: "var(--mono)", fontSize: 11 }}>{meta.key}</span>
+            </p>
+            <div className="modal-actions">
+              <button className="btn-cancel" onClick={onClose}>
+                {t("delete.cancelBtn")}
+              </button>
+              <button
+                className="btn-primary"
+                style={{ background: "var(--danger)", borderColor: "var(--danger)" }}
+                onClick={() => {
+                  deactivateLicense();
+                  setDone("removed");
+                }}
+              >
+                {t("premium.deactivateBtn")}
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <h3 className="modal-title">{t("premium.enterKey")}</h3>
+            <p className="modal-desc">{t("premium.lockedDesc")}</p>
+            <div style={{ marginBottom: 10 }}>
+              <div className="field-label">{t("premium.keyLabel")}</div>
+              <input
+                value={key}
+                onChange={(e) => setKey(e.target.value)}
+                placeholder={t("premium.keyPh")}
+                autoComplete="off"
+                spellCheck={false}
+                disabled={busy}
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  borderRadius: 8,
+                  border: "1px solid var(--border)",
+                  background: "var(--card)",
+                  color: "var(--text)",
+                  fontFamily: "var(--mono)",
+                  fontSize: 12,
+                  outline: "none",
+                }}
+                onKeyDown={(e) => e.key === "Enter" && void doActivate()}
+              />
+              <div style={{ fontSize: 10, color: "var(--dim)", marginTop: 4 }}>
+                {t("premium.keyHint")}
+              </div>
+            </div>
+            {errKey ? (
+              <div style={{ fontSize: 12, color: "var(--danger)", marginBottom: 8 }}>
+                {t(errKey)}
+              </div>
+            ) : null}
+            <div className="modal-actions">
+              <button className="btn-cancel" onClick={onClose}>
+                {t("delete.cancelBtn")}
+              </button>
+              <button
+                className="btn-primary"
+                disabled={busy}
+                onClick={() => void doActivate()}
+              >
+                {busy ? t("premium.activating") : t("premium.activateBtn")}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
