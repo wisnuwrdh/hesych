@@ -77,6 +77,23 @@ if (existsSync(`${outDir}/assets`)) {
   console.log("  - assets/ not found");
 }
 
+// [3b] safety net: OpenNext marks prerendered HTML with s-maxage=31536000
+// (CDN may pin users to a year-old document). Force revalidation instead.
+{
+  const w = readFileSync(pagesWorkerPath, "utf-8");
+  if (w.includes("s-maxage=31536000")) {
+    writeFileSync(
+      pagesWorkerPath,
+      w.replaceAll("s-maxage=31536000", "s-maxage=0, must-revalidate"),
+    );
+    console.log("  ✓ patched s-maxage -> must-revalidate");
+  }
+}
+
+// [3c] build stamp consumed by the client update-check
+writeFileSync(join(outDir, "build-info.json"), JSON.stringify({ ts: Date.now() }));
+console.log("  ✓ build-info.json written");
+
 // [4/4] public/* -> output root
 if (existsSync("public")) {
   let copied = 0;

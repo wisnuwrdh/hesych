@@ -251,6 +251,8 @@ export const STRINGS = {
   "lb.reminder": "Your vault hasn't been backed up recently.",
   "lb.enableAction": "Enable auto-backup",
   "lb.never": "never",
+  "update.available": "New version available",
+  "update.reload": "Reload",
   "premium.removeDevice": "Remove",
   "premium.thisDevice": "This device",
   "premium.deviceLimit": "Device limit reached. Remove a device first.",
