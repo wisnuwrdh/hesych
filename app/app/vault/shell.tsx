@@ -8,7 +8,11 @@ import {
   deactivate as deactivateLicense,
   getMeta as getLicenseMeta,
   isActive as licenseIsActive,
+  listDevices,
+  removeDevice,
+  type DeviceRow,
 } from "../../../lib/license";
+import { getDeviceId } from "../../../lib/device";
 import { renderHtmlKey } from "./ui";
 import { DetailPanel, ItemCard } from "./item-card";
 import { FILTERS, useVault, type VaultFilter } from "./ctx";
@@ -397,7 +401,71 @@ export function AppShell({ onLock, bioOn }: { onLock: () => void; bioOn: boolean
     </div>
   );
 }
-// ===== LICENSE (Premium activation / management) =====
+
+// Renders the device registry rows for the license modal.
+function DevicesBox({
+  rows,
+  onRemove,
+  removable,
+}: {
+  rows: DeviceRow[];
+  onRemove?: (id: string) => void;
+  removable?: boolean;
+}) {
+  const mine = getDeviceId();
+  return (
+    <div style={{ marginTop: 10 }}>
+      <div className="field-label">{t("premium.devicesTitle")}</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {rows.map((d) => (
+          <div
+            key={d.device_id}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 8,
+              padding: "7px 10px",
+              borderRadius: 8,
+              border: "1px solid var(--border)",
+              background: "var(--card)",
+              fontSize: 11,
+            }}
+          >
+            <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>
+              {d.device_name}
+              {d.device_id === mine ? (
+                <em style={{ color: "var(--accent)", fontStyle: "normal" }}>
+                  {" "}
+                  · {t("premium.thisDevice")}
+                </em>
+              ) : null}
+            </span>
+            {removable && onRemove ? (
+              d.device_id === mine ? (
+                <span style={{ color: "var(--dim)", fontSize: 10, flexShrink: 0 }}>—</span>
+              ) : (
+                <button
+                  className="act-btn del"
+                  style={{ flex: "0 0 auto", padding: "4px 8px" }}
+                  onClick={() => onRemove(d.device_id)}
+                >
+                  {t("premium.removeDevice")}
+                </button>
+              )
+            ) : null}
+          </div>
+        ))}
+      </div>
+      <div style={{ fontSize: 10, color: "var(--dim)", marginTop: 4 }}>
+        {t("premium.devicesHint")}
+      </div>
+    </div>
+  );
+}
+
+// ===== LICENSE (Premium activation, device registry max 3) =====
+
 
 function LicenseModal({ onClose }: { onClose: () => void }) {
   const meta = getLicenseMeta();
@@ -405,24 +473,48 @@ function LicenseModal({ onClose }: { onClose: () => void }) {
   const [key, setKey] = useState("");
   const [busy, setBusy] = useState(false);
   const [errKey, setErrKey] = useState<string | null>(null);
+  const [limitDevices, setLimitDevices] = useState<DeviceRow[] | null>(null);
+  const [devices, setDevices] = useState<DeviceRow[] | null>(null);
   const [done, setDone] = useState<null | "activated" | "removed">(null);
 
-  const doActivate = async () => {
-    if (!key.trim() || busy) return;
+  async function tryActivate(k: string) {
     setBusy(true);
     setErrKey(null);
-    const res = await activateLicense(key);
+    setLimitDevices(null);
+    const res = await activateLicense(k);
     setBusy(false);
-    if (!res.ok) {
-      setErrKey(res.error ?? "premium.invalidKey");
+    if (res.ok) {
+      setDone("activated");
       return;
     }
-    setDone("activated");
+    if (res.deviceLimitReached && res.devices) {
+      setLimitDevices(res.devices);
+      setErrKey("premium.deviceLimit");
+      return;
+    }
+    setErrKey(res.error ?? "premium.invalidKey");
+  }
+
+  const doActivate = () => void tryActivate(key);
+
+  const doRemoveThenActivate = async (id: string) => {
+    setBusy(true);
+    await removeDevice(key, id);
+    setBusy(false);
+    await tryActivate(key);
+  };
+
+  const loadManageDevices = () => {
+    if (meta) void listDevices(meta.key).then(setDevices);
   };
 
   return (
     <div className="modal-overlay show" onClick={onClose}>
-      <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="modal-box"
+        onClick={(e) => e.stopPropagation()}
+        onFocus={active ? undefined : undefined}
+      >
         {done === "activated" ? (
           <>
             <h3 className="modal-title">{t("premium.activeTitle")}</h3>
@@ -451,9 +543,23 @@ function LicenseModal({ onClose }: { onClose: () => void }) {
                 "{date}",
                 new Date(meta.since).toLocaleDateString(),
               )}
+              {meta.email ? (
+                <>
+                  <br />
+                  <span style={{ fontFamily: "var(--mono)", fontSize: 11 }}>{meta.email}</span>
+                </>
+              ) : null}
               <br />
               <span style={{ fontFamily: "var(--mono)", fontSize: 11 }}>{meta.key}</span>
             </p>
+            <DevicesBox
+              rows={devices ?? []}
+              removable
+              onRemove={(id) => {
+                if (!meta) return;
+                void removeDevice(meta.key, id).then(() => loadManageDevices());
+              }}
+            />
             <div className="modal-actions">
               <button className="btn-cancel" onClick={onClose}>
                 {t("delete.cancelBtn")}
@@ -469,6 +575,7 @@ function LicenseModal({ onClose }: { onClose: () => void }) {
                 {t("premium.deactivateBtn")}
               </button>
             </div>
+            <LoadDevicesOnMount onReady={loadManageDevices} />
           </>
         ) : (
           <>
@@ -494,26 +601,27 @@ function LicenseModal({ onClose }: { onClose: () => void }) {
                   fontSize: 12,
                   outline: "none",
                 }}
-                onKeyDown={(e) => e.key === "Enter" && void doActivate()}
+                onKeyDown={(e) => e.key === "Enter" && doActivate()}
               />
               <div style={{ fontSize: 10, color: "var(--dim)", marginTop: 4 }}>
                 {t("premium.keyHint")}
               </div>
             </div>
             {errKey ? (
-              <div style={{ fontSize: 12, color: "var(--danger)", marginBottom: 8 }}>
+              <div
+                style={{ fontSize: 12, color: "var(--danger)", marginBottom: 8 }}
+              >
                 {t(errKey)}
               </div>
+            ) : null}
+            {limitDevices ? (
+              <DevicesBox rows={limitDevices} removable onRemove={(id) => void doRemoveThenActivate(id)} />
             ) : null}
             <div className="modal-actions">
               <button className="btn-cancel" onClick={onClose}>
                 {t("delete.cancelBtn")}
               </button>
-              <button
-                className="btn-primary"
-                disabled={busy}
-                onClick={() => void doActivate()}
-              >
+              <button className="btn-primary" disabled={busy} onClick={doActivate}>
                 {busy ? t("premium.activating") : t("premium.activateBtn")}
               </button>
             </div>
@@ -522,4 +630,14 @@ function LicenseModal({ onClose }: { onClose: () => void }) {
       </div>
     </div>
   );
+}
+
+/** Loads the device registry once the manage view has painted. */
+function LoadDevicesOnMount({ onReady }: { onReady: () => void }) {
+  useEffect(() => {
+    const id = setTimeout(onReady, 0);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return null;
 }

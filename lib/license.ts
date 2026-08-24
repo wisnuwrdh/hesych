@@ -1,62 +1,44 @@
-// Offline license validation for Hesych Premium.
+// Hesych Premium licensing — Gumroad-verified with device registry (max 3).
 //
-// The legacy flow called a Vercel function (/api/verify-license) backed by
-// Gumroad + Supabase + Upstash — those services are decommissioned, so
-// activation is now fully offline: keys carry an HMAC-SHA256 tag that we
-// recompute locally. Keys are minted by the owner via scripts/gen-license.mjs
-// (same SECRET + alphabet — keep the two in sync).
+// Flow: activate(key) → POST /api/verify-license {license, deviceId,
+// deviceName} → route handler verifies against api.gumroad.com (refunds /
+// chargebacks / test purchases rejected server-side) and registers this
+// device in D1. On success we persist locally; a silent re-verification runs
+// whenever the last check is older than 30 days and the app is online.
 //
-// Key shape: HESYCH-PPPP-PPPP-PPPP-TAGG  (12 payload chars + 4-char HMAC tag)
-//
-// Threat model: this is indie-tier protection. A determined attacker can
-// extract the secret from the bundle; the goal is stopping casual sharing.
+// No secret lives in the client bundle — validation truth stays on Gumroad.
 
 import { STORAGE_KEYS } from "./constants";
+import { getDeviceId, getDeviceName } from "./device";
 
-const SECRET = "hesych::license::v1::VFXC2J2CTF6KY9VQ96ZQ6K24";
-const ALPHA = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // 31 chars, no 0/O/1/I/L
-const PREFIX = "HESYCH";
-
-const enc = new TextEncoder();
-
-async function hmacTag(payload: string): Promise<string> {
-  const key = await crypto.subtle.importKey(
-    "raw",
-    enc.encode(SECRET),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const sig = new Uint8Array(await crypto.subtle.sign("HMAC", key, enc.encode(payload)));
-  let out = "";
-  for (let i = 0; i < sig.length; i++) out += ALPHA[sig[i] % ALPHA.length];
-  return out.slice(0, 4);
+export interface DeviceRow {
+  device_id: string;
+  device_name: string;
+  activated_at: number;
 }
 
-/** Uppercase, strip separators, ensure prefix → "HESYCH" + 16 alphanumerics. */
-function compactKey(raw: string): string {
-  const stripped = raw.toUpperCase().replace(/[^A-Z0-9]/g, "");
-  return stripped.startsWith(PREFIX) ? stripped : PREFIX + stripped;
-}
-
-export function prettyKey(raw: string): string {
-  const c = compactKey(raw);
-  const b = c.slice(PREFIX.length);
-  return `${PREFIX}-${b.slice(0, 4)}-${b.slice(4, 8)}-${b.slice(8, 12)}-${b.slice(12, 16)}`;
-}
-
-export async function validateKey(raw: string): Promise<boolean> {
-  const c = compactKey(raw);
-  if (!new RegExp(`^${PREFIX}[A-Z0-9]{16}$`).test(c)) return false;
-  const b = c.slice(PREFIX.length);
-  const payload = b.slice(0, 12);
-  const tag = b.slice(12, 16);
-  return (await hmacTag(payload)) === tag;
-}
+export type ActivateResult =
+  | { ok: true; email?: string }
+  | {
+      ok: false;
+      error: string;
+      deviceLimitReached?: boolean;
+      devices?: DeviceRow[];
+    };
 
 export interface LicenseMeta {
   key: string;
+  email: string | null;
   since: number;
+}
+
+const REVERIFY_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+function persist(key: string, email: string | null): void {
+  localStorage.setItem(STORAGE_KEYS.license, key);
+  localStorage.setItem(STORAGE_KEYS.licenseVerified, "1");
+  localStorage.setItem(STORAGE_KEYS.licenseAt, String(Date.now()));
+  if (email) localStorage.setItem(STORAGE_KEYS.licenseEmail, email);
 }
 
 export function isActive(): boolean {
@@ -70,24 +52,107 @@ export function isActive(): boolean {
 export function getMeta(): LicenseMeta | null {
   try {
     const key = localStorage.getItem(STORAGE_KEYS.license);
+    const email = localStorage.getItem(STORAGE_KEYS.licenseEmail);
     const since = Number(localStorage.getItem(STORAGE_KEYS.licenseAt) || 0);
     if (!key || !isActive()) return null;
-    return { key, since };
+    return { key, email, since };
   } catch {
     return null;
   }
 }
 
-export async function activate(raw: string): Promise<{ ok: boolean; error?: string }> {
-  if (!(await validateKey(raw))) return { ok: false, error: "premium.invalidKey" };
-  localStorage.setItem(STORAGE_KEYS.license, prettyKey(raw));
-  localStorage.setItem(STORAGE_KEYS.licenseVerified, "1");
-  localStorage.setItem(STORAGE_KEYS.licenseAt, String(Date.now()));
-  return { ok: true };
+/** Silent 30-day revalidation — never blocks, only downgrades on hard invalid. */
+export async function revalidateIfNeeded(): Promise<void> {
+  const meta = getMeta();
+  if (!meta) return;
+  const since = Number(localStorage.getItem(STORAGE_KEYS.licenseAt) || 0);
+  if (Date.now() - since < REVERIFY_MS) return;
+  if (typeof navigator !== "undefined" && !navigator.onLine) return;
+  try {
+    const res = await fetch("/api/verify-license", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        license: meta.key,
+        deviceId: getDeviceId(),
+        action: "list",
+      }),
+    });
+    if (res.ok && res.headers.get("content-type")?.includes("application/json")) {
+      // Registered device path returned OK → refresh timestamp.
+      persist(meta.key, meta.email);
+    }
+  } catch {
+    // offline/network error → keep current state until next attempt
+  }
+}
+
+export async function activate(raw: string): Promise<ActivateResult> {
+  const key = raw.trim();
+  if (!key) return { ok: false, error: "premium.invalidKey" };
+  let data: {
+    valid?: boolean;
+    error?: string;
+    email?: string;
+    deviceLimitReached?: boolean;
+    devices?: DeviceRow[];
+  };
+  try {
+    const res = await fetch("/api/verify-license", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        license: key,
+        deviceId: getDeviceId(),
+        deviceName: getDeviceName(),
+      }),
+    });
+    data = await res.json();
+  } catch {
+    return { ok: false, error: "premium.networkError" };
+  }
+  if (!data.valid) {
+    return {
+      ok: false,
+      error: data.error ?? "premium.invalidKey",
+      deviceLimitReached: data.deviceLimitReached,
+      devices: data.devices,
+    };
+  }
+  persist(key, data.email ?? null);
+  return { ok: true, email: data.email };
 }
 
 export function deactivate(): void {
   localStorage.removeItem(STORAGE_KEYS.license);
   localStorage.removeItem(STORAGE_KEYS.licenseVerified);
   localStorage.removeItem(STORAGE_KEYS.licenseAt);
+  localStorage.removeItem(STORAGE_KEYS.licenseEmail);
+}
+
+export async function listDevices(key: string): Promise<DeviceRow[]> {
+  const res = await fetch("/api/verify-license", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ license: key, deviceId: getDeviceId(), action: "list" }),
+  });
+  if (!res.ok) return [];
+  const data = (await res.json()) as { devices?: DeviceRow[] };
+  return data.devices ?? [];
+}
+
+export async function removeDevice(key: string, removeId: string): Promise<boolean> {
+  const res = await fetch("/api/verify-license", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      license: key,
+      deviceId: getDeviceId(),
+      action: "remove",
+      removeDeviceId: removeId,
+    }),
+  });
+  if (!res.ok) return false;
+  const data = (await res.json()) as { success?: boolean };
+  return Boolean(data.success);
 }

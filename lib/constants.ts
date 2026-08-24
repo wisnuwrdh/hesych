@@ -35,6 +35,7 @@ export const STORAGE_KEYS = {
   license: "vault_license",
   licenseVerified: "vault_license_verified",
   licenseAt: "vault_license_at",
+  licenseEmail: "vault_license_email",
   syncTs: "hesych_sync_ts",
   bioCredId: "vault_bio_cred_id",
   bioEnabled: "vault_bio_enabled",
