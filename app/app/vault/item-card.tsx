@@ -286,33 +286,37 @@ function ItemDetails({ item }: { item: VaultItem }) {
       ) : null}
       <LastChanged item={item} />
       <CustomFields item={item} />
-      <div className="detail-panel-actions">
-        <button
-          className="act-btn copy"
-          onClick={() => ctx.copyPassword(item.id)}
-        >
-          <CopyIcon width={11} height={11} /> {t("detail.copyPw")}
-        </button>
-        <button
-          className="act-btn"
-          onClick={() => ctx.openSheet(item)}
-        >
-          <EditIcon width={11} height={11} /> {t("detail.edit")}
-        </button>
-        {ctx.isPremium() ? (
+      <div className="item-actions">
+        <div className="item-actions-primary">
           <button
-            className="act-btn-icon"
-            style={{ color: "var(--accent)", borderColor: "var(--accent-dim)" }}
-            onClick={() => ctx.openHist(item)}
+            className="act-btn copy"
+            onClick={() => ctx.copyPassword(item.id)}
           >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <polyline points="12 6 12 12 16 14" />
-            </svg>{" "}
-            <span style={{ fontSize: 11 }}>History</span>
+            <CopyIcon width={11} height={11} /> {t("detail.copyPw")}
           </button>
-        ) : null}
-        {ctx.isPremium() ? (
+          <button
+            className="act-btn"
+            onClick={() => ctx.openSheet(item)}
+          >
+            <EditIcon width={11} height={11} /> {t("detail.edit")}
+          </button>
+          <button
+            className="act-btn del"
+            onClick={() => ctx.setPendingDelete(item)}
+          >
+            <TrashIcon width={11} height={11} /> {t("detail.delete")}
+          </button>
+        </div>
+        <div className="item-actions-secondary">
+          <button
+            className={"act-btn-icon fav" + (item.favorite ? " active" : "")}
+            onClick={() => ctx.toggleFav(item.id)}
+          >
+            <StarIcon width={12} height={12} />{" "}
+            <span style={{ fontSize: 11 }}>
+              {item.favorite ? t("detail.unfav") : t("detail.fav")}
+            </span>
+          </button>
           <button
             className="act-btn-icon"
             style={{ color: "var(--accent)", borderColor: "var(--accent-dim)" }}
@@ -330,44 +334,41 @@ function ItemDetails({ item }: { item: VaultItem }) {
             </svg>{" "}
             <span style={{ fontSize: 11 }}>{t("share.btn")}</span>
           </button>
-        ) : null}
-        <button
-          className="act-btn-icon"
-          disabled={ctx.breachChecking.has(item.id)}
-          onClick={() => ctx.checkItemBreach(item.id)}
-        >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-            <polyline points="9 12 11 14 15 10" />
-          </svg>{" "}
-          <span style={{ fontSize: 11 }}>
-            {ctx.breachChecking.has(item.id) ? "…" : t("breach.checkBtn")}
-          </span>
-        </button>
-        <button
-          className="act-btn-icon"
-          style={item.favorite ? { color: "var(--yellow)" } : undefined}
-          onClick={() => ctx.toggleFav(item.id)}
-        >
-          <StarIcon width={12} height={12} />{" "}
-          <span style={{ fontSize: 11 }}>
-            {item.favorite ? t("detail.unfav") : t("detail.fav")}
-          </span>
-        </button>
-        <button
-          className="act-btn-icon"
-          style={{ color: "var(--accent)", borderColor: "var(--accent-dim)" }}
-          onClick={() => ctx.setPendingSecretLock(item)}
-        >
-          <LockIcon width={12} height={12} />{" "}
-          <span style={{ fontSize: 11 }}>{t("detail.lockSecret")}</span>
-        </button>
-        <button
-          className="act-btn del"
-          onClick={() => ctx.setPendingDelete(item)}
-        >
-          <TrashIcon width={11} height={11} /> {t("detail.delete")}
-        </button>
+          <button
+            className="act-btn-icon"
+            style={{ color: "var(--accent)", borderColor: "var(--accent-dim)" }}
+            onClick={() => ctx.setPendingSecretLock(item)}
+          >
+            <LockIcon width={12} height={12} />{" "}
+            <span style={{ fontSize: 11 }}>{t("detail.lockSecret")}</span>
+          </button>
+          <button
+            className="act-btn-icon"
+            disabled={ctx.breachChecking.has(item.id)}
+            onClick={() => ctx.checkItemBreach(item.id)}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              <polyline points="9 12 11 14 15 10" />
+            </svg>{" "}
+            <span style={{ fontSize: 11 }}>
+              {ctx.breachChecking.has(item.id) ? "…" : t("breach.checkBtn")}
+            </span>
+          </button>
+          {ctx.isPremium() ? (
+            <button
+              className="act-btn-icon"
+              style={{ color: "var(--accent)", borderColor: "var(--accent-dim)" }}
+              onClick={() => ctx.openHist(item)}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>{" "}
+              <span style={{ fontSize: 11 }}>History</span>
+            </button>
+          ) : null}
+        </div>
       </div>
     </div>
   );
