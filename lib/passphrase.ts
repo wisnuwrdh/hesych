@@ -53,25 +53,39 @@ export const DEFAULT_GEN: GenOptions = {
 const AMBIGUOUS = "0O1lI";
 
 export function generateRandomPassword(opts: GenOptions): string {
-  let chars = "";
-  if (opts.upper) chars += opts.excludeAmbiguous ? "ABCDEFGHJKLMNPQRSTUVWXYZ" : "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  if (opts.lower) chars += opts.excludeAmbiguous ? "abcdefghjkmnpqrstuvwxyz" : "abcdefghijklmnopqrstuvwxyz";
-  if (opts.numbers) chars += opts.excludeAmbiguous ? "23456789" : "0123456789";
-  if (opts.symbols) chars += "!@#$%^&*-_+=?";
-  if (!chars) chars = "abcdefghijklmnopqrstuvwxyz";
+  const pools: string[] = [];
+  if (opts.upper) pools.push(opts.excludeAmbiguous ? "ABCDEFGHJKLMNPQRSTUVWXYZ" : "ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+  if (opts.lower) pools.push(opts.excludeAmbiguous ? "abcdefghjkmnpqrstuvwxyz" : "abcdefghijklmnopqrstuvwxyz");
+  if (opts.numbers) pools.push(opts.excludeAmbiguous ? "23456789" : "0123456789");
+  if (opts.symbols) pools.push("!@#$%^&*-_+=?");
+  const all = pools.join("") || "abcdefghijklmnopqrstuvwxyz";
+  const pools_ = pools.length ? pools : [all];
 
-  let pw = "";
-  const arr = crypto.getRandomValues(new Uint8Array(opts.length * 2));
-  for (const b of arr) {
-    if (pw.length >= opts.length) break;
-    const c = chars[b % chars.length];
-    if (!opts.excludeAmbiguous || !AMBIGUOUS.includes(c)) pw += c;
+  const bytes = crypto.getRandomValues(new Uint8Array((opts.length + pools_.length + 32) * 4));
+  let bi = 0;
+  const pick = (pool: string): string => {
+    let c = "";
+    // skip ambiguous characters outright when the option is on
+    do {
+      c = pool[bytes[bi++ % bytes.length] % pool.length];
+    } while (opts.excludeAmbiguous && AMBIGUOUS.includes(c));
+    return c;
+  };
+
+  const out: string[] = [];
+  // guarantee at least one character from every enabled class
+  for (const p of pools_) {
+    if (out.length >= opts.length) break;
+    out.push(pick(p));
   }
-  while (pw.length < opts.length) {
-    const extra = crypto.getRandomValues(new Uint8Array(4));
-    pw += chars[extra[0] % chars.length];
+  while (out.length < opts.length) out.push(pick(all));
+
+  // Fisher–Yates shuffle so guaranteed chars aren't front-loaded
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = bytes[bi++ % bytes.length] % (i + 1);
+    [out[i], out[j]] = [out[j], out[i]];
   }
-  return pw;
+  return out.join("");
 }
 
 export function generatePassphrase(opts: GenOptions): string {

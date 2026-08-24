@@ -15,11 +15,14 @@ describe("generator", () => {
   });
 
   it("generates password of requested length", () => {
-    const pw = generateRandomPassword({ ...DEFAULT_GEN, length: 24 });
-    expect(pw.length).toBe(24);
-    expect(pw).toMatch(/[A-Z]/);
-    expect(pw).toMatch(/[a-z]/);
-    expect(pw).toMatch(/[0-9]/);
+    for (let i = 0; i < 30; i++) {
+      const pw = generateRandomPassword({ ...DEFAULT_GEN, length: 24 });
+      expect(pw.length).toBe(24);
+      expect(pw).toMatch(/[A-Z]/);
+      expect(pw).toMatch(/[a-z]/);
+      expect(pw).toMatch(/[0-9]/);
+      expect(pw).toMatch(/[!@#$%^&*\-_+=?]/);
+    }
   });
 
   it("excludes ambiguous chars when enabled", () => {
