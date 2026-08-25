@@ -175,7 +175,7 @@ export const STRINGS = {
   "toast.pwRequired": "Account password is required",
   "toast.importFail": "Import failed: {msg}",
   "toast.backupFail": "Backup failed: {msg}",
-  "toast.copyFail": "Failed to copy: {msg}",
+  "toast.copyFail": "Failed to copy to clipboard.",
   "toast.decryptErr": "Decryption failed: {msg}",
   "toast.importInvalid": "{n} invalid items (rows: {rows})",
   "toast.vaultNotOpen": "Import failed: vault not open",

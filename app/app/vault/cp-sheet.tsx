@@ -1,5 +1,7 @@
 "use client";
 
+import { renderHtmlKey } from "./ui";
+
 import { useState } from "react";
 import { t } from "../../../lib/i18n";
 import { useVault } from "./ctx";
@@ -67,7 +69,7 @@ export function ChangePwSheet() {
           </button>
         </div>
         <div id="cpWarnBox" style={{ fontSize: 11, color: "var(--sub)", background: "var(--accent-dim)", border: "1px solid #3a2f7a", borderRadius: 8, padding: "8px 12px", marginBottom: 14, lineHeight: 1.5 }}>
-          ⚠️ {t("cpSheet.warn")}
+          ⚠️ {renderHtmlKey("cpSheet.warn")}
         </div>
         <div className="field">
           <div className="field-label">{t("cpSheet.oldLabel")}</div>

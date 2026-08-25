@@ -85,7 +85,7 @@ export function ConfirmModal({
 }: {
   open: boolean;
   title: string;
-  desc: string;
+  desc: React.ReactNode;
   confirmLabel: string;
   cancelLabel: string;
   danger?: boolean;
@@ -146,15 +146,23 @@ export function ConfirmModal({
 }
 
 /** Replaces dangerous inline <strong>…</strong>/<br> keys with safe JSX. */
-export function renderHtmlKey(key: string): ReactNode {
-  const raw = t(key);
-  const parts = raw.split(/(<strong>.*?<\/strong>|<br\s*\/?>)/g);
+export function renderHtmlKey(
+  key: string,
+  vars?: Record<string, string | number | undefined>,
+  slots?: Record<string, React.ReactNode>,
+): React.ReactNode {
+  const raw = t(key, vars);
+  const parts = raw.split(/(<strong\b[^>]*>[\s\S]*?<\/strong>|<br\s*\/?>)/g);
   return parts.map((part, i) => {
-    if (part === "<br>" || part === "<br />" || part === "<br/>") {
-      return <br key={i} />;
+    if (/^<br\s*\/?>$/.test(part)) return <br key={i} />;
+    const m = part.match(/^<strong\b([^>]*)>([\s\S]*)<\/strong>$/);
+    if (m) {
+      const idMatch = m[1].match(/id="([^"]+)"/);
+      const slotId = idMatch?.[1];
+      const content =
+        slotId && slots && slots[slotId] !== undefined ? slots[slotId] : m[2];
+      return <strong key={i}>{content}</strong>;
     }
-    const m = part.match(/^<strong>(.*)<\/strong>$/);
-    if (m) return <strong key={i}>{m[1]}</strong>;
     return part;
   });
 }

@@ -58,7 +58,7 @@ import { isEnabled as localBackupEnabled, writeSnapshot as writeLocalSnapshot } 
 import { isItemSecretLocked } from "../../../lib/secretlock";
 import type { VaultItem } from "../../../lib/types";
 import { LockScreen } from "./lock-screen";
-import { ConfirmModal, ToastHost, showGlobalToast } from "./ui";
+import { ConfirmModal, ToastHost, showGlobalToast, renderHtmlKey } from "./ui";
 import { SecretLockModal } from "./secret-lock-modal";
 import { AppShell } from "./shell";
 import { VaultCtx, type VaultFilter, DEFAULT_ADV, type AdvFilter } from "./ctx";
@@ -253,7 +253,7 @@ export function VaultApp() {
   }, []);
 
   const enterVault = useCallback(async (db: IDBDatabase, key: VaultKey) => {
-    const { items: loaded, needMigrate } = await loadItems(db, key);
+    const { items: loaded, needMigrate, failedCount } = await loadItems(db, key);
     if (needMigrate.length) {
       migrateMetadata(db, key, needMigrate).catch((e) =>
         console.warn("metadata migration", e),
@@ -271,6 +271,9 @@ export function VaultApp() {
     setExpanded(new Set());
     setRevealed(new Map());
     setPhase("unlocked");
+    if (failedCount > 0) {
+      showGlobalToast(t("toast.decryptFailed", { n: failedCount }), "err", setToast);
+    }
     void populateStrengths(loaded, key);
     void loadShareLog();
   }, [populateStrengths, loadShareLog]);
@@ -799,8 +802,8 @@ export function VaultApp() {
         if (!pw) return;
         if (await copyText(pw)) pushToast(t("toast.copiedPw"), "ok");
         else pushToast(t("toast.copyFail"), "err");
-      } catch {
-        pushToast(t("toast.decryptFailed"), "err");
+      } catch (err) {
+        pushToast(t("toast.decryptErr", { msg: String(err instanceof Error ? err.message : err) }), "err");
       }
     },
     [decryptPassword, copyText, pushToast],
@@ -822,8 +825,8 @@ export function VaultApp() {
         const v = await decryptField(id, idx);
         if (await copyText(v)) pushToast(t("cf.copied"), "ok");
         else pushToast(t("toast.copyFail"), "err");
-      } catch {
-        pushToast(t("toast.decryptFailed"), "err");
+      } catch (err) {
+        pushToast(t("toast.decryptErr", { msg: String(err instanceof Error ? err.message : err) }), "err");
       }
     },
     [decryptField, copyText, pushToast],
@@ -848,8 +851,8 @@ export function VaultApp() {
           else next.delete(id);
           return next;
         });
-      } catch {
-        pushToast(t("toast.decryptErr"), "err");
+      } catch (err) {
+        pushToast(t("toast.decryptErr", { msg: String(err instanceof Error ? err.message : err) }), "err");
       }
     },
     [decryptPassword, revealed, pushToast],
@@ -1089,7 +1092,9 @@ export function VaultApp() {
       <ConfirmModal
         open={pendingDelete !== null}
         title={t("delete.title")}
-        desc={t("delete.desc")}
+        desc={renderHtmlKey("delete.desc", undefined, {
+          deleteItemName: pendingDelete?.title ?? "",
+        })}
         confirmLabel={t("delete.confirmBtn")}
         cancelLabel={t("delete.cancelBtn")}
         danger

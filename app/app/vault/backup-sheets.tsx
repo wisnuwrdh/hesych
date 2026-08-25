@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { t } from "../../../lib/i18n";
+import { renderHtmlKey } from "./ui";
 import type { BackupBundle } from "../../../lib/backup";
 import { useVault } from "./ctx";
 
@@ -227,7 +228,7 @@ const [showImportPw, setShowImportPw] = useState(false);
       <div className="sheet show" id="encImportSheet">
         <SheetHead title={t("import.title")} onClose={() => ctx.setImportOpen(false)} />
         <div style={{ fontSize: 12, color: "var(--dim)", margin: "4px 0 16px", lineHeight: 1.5 }}>
-          {t("import.desc")}
+          {renderHtmlKey("import.desc")}
         </div>
 
         <label className="import-file-row">

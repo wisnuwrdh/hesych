@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { t } from "../../../lib/i18n";
+import { useVault } from "./ctx";
+import { renderHtmlKey } from "./ui";
 import { setSecretLock } from "../../../lib/secretlock";
 import { LockIcon } from "./icons";
 
@@ -23,6 +25,9 @@ export function SecretLockModal({
   onClose: () => void;
   onLocked: () => void;
 }) {
+  const ctx = useVault();
+  const itemName =
+    ctx.items.find((it) => it.id === itemId)?.title ?? "";
   const [sel, setSel] = useState<string | null>(null);
   const [custom, setCustom] = useState({
     y: 0,
@@ -65,7 +70,11 @@ export function SecretLockModal({
           <LockIcon width={18} height={18} style={{ color: "var(--accent)" }} />
           <span>{t("secretLock.title")}</span>
         </div>
-        <p className="modal-desc">{t("secretLock.desc")}</p>
+        <p className="modal-desc">
+          {renderHtmlKey("secretLock.desc", undefined, {
+            secretLockItemName: itemName,
+          })}
+        </p>
         <div className="dur-presets">
           {PRESETS.map((p) => (
             <button

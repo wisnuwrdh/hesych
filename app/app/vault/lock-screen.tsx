@@ -77,12 +77,22 @@ export function LockScreen({
     try {
       const ok = await onPasswordSubmit(v, firstTime);
       if (!ok) {
-        setMsg(t("lock.wrongPw"));
+        setMsg(
+          t("lock.wrongPw", {
+            n: Math.max(1, MAX_ATTEMPTS - (lockout.attempts + 1)),
+          }),
+        );
         setMsgType("err");
       }
     } catch (err) {
       console.error("onPasswordSubmit error", err);
-      setMsg(err instanceof Error ? err.message : t("lock.wrongPw"));
+      setMsg(
+        err instanceof Error
+          ? err.message
+          : t("lock.wrongPw", {
+              n: Math.max(1, MAX_ATTEMPTS - (lockout.attempts + 1)),
+            }),
+      );
       setMsgType("err");
     } finally {
       setWorking(false);

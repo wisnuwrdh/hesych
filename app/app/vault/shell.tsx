@@ -187,7 +187,7 @@ function EmptyState() {
   if (ctx.filter === "fav") {
     body = renderHtmlKey("empty.noFav");
   } else if (ctx.search) {
-    body = <>{t("empty.noResults").replace(/<[^>]+>/g, "").replace("{q}", `“${ctx.search}”`)}</>;
+    body = renderHtmlKey("empty.noResults", { q: ctx.search });
   } else {
     body = t("empty.noItems");
   }
