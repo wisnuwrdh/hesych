@@ -17,7 +17,6 @@ import {
   cpSync,
   readdirSync,
 } from "node:fs";
-import { join } from "node:path";
 
 const outDir = ".open-next";
 const workerPath = `${outDir}/worker.js`;
@@ -90,10 +89,6 @@ if (existsSync(`${outDir}/assets`)) {
     console.log("  ✓ patched s-maxage -> must-revalidate");
   }
 }
-
-// [3c] build stamp consumed by the client update-check
-writeFileSync(join(outDir, "build-info.json"), JSON.stringify({ ts: Date.now() }));
-console.log("  ✓ build-info.json written");
 
 // [4/4] public/* -> output root
 if (existsSync("public")) {

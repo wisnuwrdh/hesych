@@ -26,7 +26,6 @@ import { renderHtmlKey } from "./ui";
 import { DetailPanel, ItemCard } from "./item-card";
 import { FILTERS, useVault, type VaultFilter } from "./ctx";
 import { AdvFilterBar } from "./adv-filter";
-import { useUpdateAvailable } from "./useVersionCheck";
 import {
   FingerprintIcon,
   LockIcon,
@@ -318,7 +317,6 @@ export function AppShell({ onLock, bioOn }: { onLock: () => void; bioOn: boolean
   const ctx = useVault();
   const [licOpen, setLicOpen] = useState(false);
   const [lbOpen, setLbOpen] = useState(false);
-  const updateAvailable = useUpdateAvailable();
   const pro = ctx.isPremium();
   const showLbReminder = reminderDue(ctx.itemCount);
   const desktopCount = ctx.counts[ctx.filter] ?? ctx.list.length;
@@ -378,14 +376,6 @@ export function AppShell({ onLock, bioOn }: { onLock: () => void; bioOn: boolean
             />
             {lbOpen ? <LocalBackupModal onClose={() => setLbOpen(false)} /> : null}
             {licOpen ? <LicenseModal onClose={() => setLicOpen(false)} /> : null}
-            {updateAvailable ? (
-              <div style={{ position:"fixed", bottom:0, left:0, right:0, zIndex:200, display:"flex", alignItems:"center", justifyContent:"center", gap:10, padding:"10px 12px", background:"var(--accent)", color:"#fff", fontSize:12 }}>
-                <span>{t("update.available")}</span>
-                <button onClick={() => location.reload()} style={{ border:"none", borderRadius:6, padding:"5px 10px", fontWeight:600, cursor:"pointer" }}>
-                  {t("update.reload")}
-                </button>
-              </div>
-            ) : null}
           </div>
         </div>
 
