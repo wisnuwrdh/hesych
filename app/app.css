@@ -19,6 +19,7 @@ html{
   --accent:#7c6af7;
   --accent-glow:#7c6af720;
   --accent-dim:#2a2440;
+  --code-bg:#0d0d10;
   --danger:#f05;
   --danger-dim:#300010;
   --warn:#f0a000;
@@ -46,6 +47,7 @@ html{
   --accent:#7c6af7;
   --accent-glow:#7c6af718;
   --accent-dim:#ebe8ff;
+  --code-bg:#eef0f4;
   --danger:#e0003a;
   --danger-dim:#fff0f4;
   --warn:#c07800;
