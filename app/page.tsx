@@ -216,9 +216,6 @@ export default function HomePage() {
           <div className="wrap">
             <div className="hero-inner">
               <div className="hero-text">
-                <span className="badge">
-                  Password Manager · Local Encryption · One-Time Payment
-                </span>
                 <h1>
                   <span>The Most Secure Password Manager.</span>
                   <br />
@@ -575,9 +572,6 @@ export default function HomePage() {
 
           <div className="foot-bottom">
             <span className="foot-copy">© 2026 Hesych. All rights reserved.</span>
-            <span className="foot-note">
-              Zero-knowledge · Your data never leaves your device
-            </span>
           </div>
         </div>
       </footer>
