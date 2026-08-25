@@ -81,10 +81,14 @@ export function UpgradeClient({
 
   // localStorage hanya tersedia di client — flip setelah mount agar SSR aman
   useEffect(() => {
-    if (licenseIsActive()) {
-      setStatus("active");
-      setMeta(getLicenseMeta());
-    }
+    // defer agar tidak memicu cascading render sinkron (react-hooks lint)
+    const id = requestAnimationFrame(() => {
+      if (licenseIsActive()) {
+        setStatus("active");
+        setMeta(getLicenseMeta());
+      }
+    });
+    return () => cancelAnimationFrame(id);
   }, []);
   const [key, setKey] = useState("");
   const [busy, setBusy] = useState(false);
