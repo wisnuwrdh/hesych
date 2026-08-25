@@ -881,7 +881,9 @@ svg{display:block;flex-shrink:0}
   background:#00000080;
   backdrop-filter:blur(8px);
   -webkit-backdrop-filter:blur(8px);
-  z-index:50;
+  /* above #lockScreen (z100) — modals triggered from the lock screen
+     must never render underneath it */
+  z-index:150;
   display:none;
   align-items:center;justify-content:center;
   padding:24px;
