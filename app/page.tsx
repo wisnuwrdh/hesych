@@ -20,6 +20,10 @@ const compareRows = [
   { label: "Encrypted Share Link", free: false, pro: true },
 ] as const;
 
+export const metadata = {
+  alternates: { canonical: "https://hesych.com/" },
+};
+
 const faq = [
   {
     q: "Where is my data stored?",
@@ -155,6 +159,31 @@ const features = [
     ),
   },
 ];
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    { "@type": "WebSite", name: "Hesych", url: "https://hesych.com/" },
+    { "@type": "Organization", name: "Hesych", url: "https://hesych.com/", logo: "https://hesych.com/og-image.png" },
+    {
+      "@type": "SoftwareApplication",
+      name: "Hesych",
+      applicationCategory: "SecurityApplication",
+      operatingSystem: "Web (PWA)",
+      description: "Local-first password manager with AES-256-GCM encryption. One-time payment, zero-knowledge.",
+      offers: { "@type": "Offer", price: "9.99", priceCurrency: "USD" },
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: faq.map((f) => ({
+        "@type": "Question",
+        name: f.q,
+        acceptedAnswer: { "@type": "Answer", text: f.a },
+      })),
+    },
+  ],
+};
+
 
 export default function HomePage() {
   return (
@@ -442,7 +471,11 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* ============== FAQ ============== */}
+        <script
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+            />
+            {/* ============== FAQ ============== */}
         <section>
           <div className="wrap">
             <div className="sec-head">

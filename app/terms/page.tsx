@@ -246,6 +246,7 @@ const BODY = String.raw`<nav class="nav">
 </div>`;
 
 export const metadata = {
+  alternates: { canonical: "https://hesych.com/terms" },
   title: 'Terms of Service — Hesych',
   description: 'Terms of service for the Hesych local-first password manager.',
 };

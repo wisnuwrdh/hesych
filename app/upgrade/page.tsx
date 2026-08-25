@@ -203,6 +203,7 @@ body::before{
 .btn-open:hover{border-color:var(--border-focus)}`;
 
 const BODY = String.raw`<div class="wrap">
+  <h1 class="doc-title" style="font-size:22px;margin-bottom:4px;text-align:center">Upgrade to Pro</h1>
 
   <a href="/" class="back">
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
@@ -357,6 +358,7 @@ const BODY = String.raw`<div class="wrap">
 <div class="toast" id="toast"></div>`;
 
 export const metadata = {
+  alternates: { canonical: "https://hesych.com/upgrade" },
   title: 'Upgrade to Pro — Hesych',
   description: 'Unlock unlimited items, health score, advanced generator and more with Hesych Pro.',
 };

@@ -247,6 +247,7 @@ const BODY = String.raw`<nav class="nav">
 </div>`;
 
 export const metadata = {
+  alternates: { canonical: "https://hesych.com/privacy" },
   title: 'Privacy Policy — Hesych',
   description: 'How Hesych handles your data: local-first encryption, no tracking, no data collection.',
 };
