@@ -2113,3 +2113,14 @@ svg{display:block;flex-shrink:0}
   background:var(--code-bg, #0d0d10);border:1px solid var(--border);
   border-radius:8px;padding:10px 12px;
 }
+
+/* ===== SHARE VIEWER LOGO (ported from legacy share.css) + bio-active ===== */
+.logo{display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:28px}
+.logo-mark{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.logo-img{display:block;object-fit:contain;pointer-events:none;-webkit-touch-callout:none;user-select:none}
+.logo-img-light{display:none}
+[data-theme="light"] .logo-img-dark{display:none}
+[data-theme="light"] .logo-img-light{display:block}
+.logo-name{font-size:18px;font-weight:600;letter-spacing:-.3px}
+.logo-sub{font-size:11px;color:var(--dim);font-family:var(--mono)}
+.icon-btn.bio-active{color:var(--accent);border-color:var(--accent);background:var(--accent-dim);}

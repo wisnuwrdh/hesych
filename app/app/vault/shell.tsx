@@ -14,6 +14,12 @@ import {
 } from "../../../lib/license";
 import { getDeviceId } from "../../../lib/device";
 import {
+  disableBiometric,
+  isBiometricEnabled,
+  isBiometricSupported,
+  registerBiometric,
+} from "../../../lib/bio";
+import {
   disableLocalBackup,
   fsSupported,
   isEnabled as lbEnabled,
@@ -317,6 +323,34 @@ export function AppShell({ onLock, bioOn }: { onLock: () => void; bioOn: boolean
   const ctx = useVault();
   const [licOpen, setLicOpen] = useState(false);
   const [lbOpen, setLbOpen] = useState(false);
+  const [bioActive, setBioActive] = useState(() => isBiometricEnabled());
+  const [note, setNote] = useState<{ msg: string; type: string } | null>(null);
+  const noteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showNote = (msg: string, type: string = "ok") => {
+    setNote({ msg, type });
+    if (noteTimer.current) clearTimeout(noteTimer.current);
+    noteTimer.current = setTimeout(() => setNote(null), 2600);
+  };
+
+  const toggleBio = async () => {
+    if (!isBiometricSupported()) return;
+    if (isBiometricEnabled()) {
+      disableBiometric();
+      setBioActive(false);
+      showNote(t("bio.disabled"));
+      return;
+    }
+    const res = await registerBiometric();
+    if (res.ok) {
+      setBioActive(true);
+      showNote(t("bio.enabled"));
+    } else if (res.canceled) {
+      showNote(t("bio.expired"), "warn");
+    } else {
+      showNote(t("bio.failed"), "err");
+    }
+  };
   const pro = ctx.isPremium();
   const showLbReminder = reminderDue(ctx.itemCount);
   const desktopCount = ctx.counts[ctx.filter] ?? ctx.list.length;
@@ -360,11 +394,16 @@ export function AppShell({ onLock, bioOn }: { onLock: () => void; bioOn: boolean
           </div>
           <div className="bar-actions">
             <ThemeToggle />
-            {bioOn && (
-              <button className="icon-btn bio-active" id="bioToggleBtn" title={t("bio.enabled")}>
+            {isBiometricSupported() ? (
+              <button
+                className={"icon-btn" + (bioActive ? " bio-active" : "")}
+                id="bioToggleBtn"
+                title={bioActive ? t("bio.btnDisable") : t("bio.btnSetup")}
+                onClick={() => void toggleBio()}
+              >
                 <FingerprintIcon width={15} height={15} />
               </button>
-            )}
+            ) : null}
             <button className="icon-btn" id="headerLockBtn" onClick={onLock} title={t("app.lockTitle")}>
               <LockIcon width={15} height={15} />
             </button>
@@ -375,6 +414,11 @@ export function AppShell({ onLock, bioOn }: { onLock: () => void; bioOn: boolean
               onOpenLicense={() => setLicOpen(true)}
             />
             {lbOpen ? <LocalBackupModal onClose={() => setLbOpen(false)} /> : null}
+            {note ? (
+              <div className={"toast show " + note.type} style={{ bottom: 120 }}>
+                {note.msg}
+              </div>
+            ) : null}
             {licOpen ? <LicenseModal onClose={() => setLicOpen(false)} /> : null}
           </div>
         </div>

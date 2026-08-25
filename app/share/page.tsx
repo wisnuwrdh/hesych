@@ -50,6 +50,16 @@ export default function SharePage() {
 
   return (
     <main className="share-viewer">
+      <div className="logo">
+        <div className="logo-mark">
+          <img src="/logo-dark.webp" className="logo-img logo-img-dark" alt="" width={36} height={36} />
+          <img src="/logo-light.webp" className="logo-img logo-img-light" alt="" width={36} height={36} />
+        </div>
+        <div>
+          <div className="logo-name">Hesych</div>
+          <div className="logo-sub">Encrypted Share</div>
+        </div>
+      </div>
       <div className="share-viewer-card">
         {phase === "expired" ? (
           <div className="share-viewer-msg">{t("share.expired")}</div>
