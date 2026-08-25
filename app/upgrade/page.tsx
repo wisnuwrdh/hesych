@@ -1,7 +1,12 @@
-import { LegalPage } from "../legal-page";
+import type { Metadata } from "next";
+import { UpgradeClient } from "./client";
 
-// Ported verbatim from the legacy static site (upgrade.html) — original scoped
-// styles + markup preserved for pixel-faithful migration.
+export const metadata: Metadata = {
+  alternates: { canonical: "https://hesych.com/upgrade" },
+  title: 'Upgrade to Pro — Hesych',
+  description: 'Unlock unlimited items, health score, advanced generator and more with Hesych Pro.',
+};
+
 const CSS = String.raw`*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#0a0a0c;--surface:#111114;--card:#16161a;
@@ -202,7 +207,7 @@ body::before{
 }
 .btn-open:hover{border-color:var(--border-focus)}`;
 
-const BODY = String.raw`<div class="wrap">
+const HEAD_HTML = String.raw`<div class="wrap">
   <h1 class="doc-title" style="font-size:22px;margin-bottom:4px;text-align:center">Upgrade to Pro</h1>
 
   <a href="/" class="back">
@@ -220,7 +225,9 @@ const BODY = String.raw`<div class="wrap">
     <span class="logo-text">Hesych</span>
   </div>
 
-  <!-- Activated State (shown after activation) -->
+  `;
+
+const ACTIVATED_HTML = String.raw`<!-- Activated State (shown after activation) -->
   <div class="card activated-card" id="activatedCard">
     <div class="activated-icon">✓</div>
     <div class="activated-title">Premium Activated! 🎉</div>
@@ -233,7 +240,9 @@ const BODY = String.raw`<div class="wrap">
     </a>
   </div>
 
-  <!-- Buy Section -->
+  `;
+
+const BUY_HTML = String.raw`<!-- Buy Section -->
   <div id="buySection">
 
     <div class="card">
@@ -315,11 +324,10 @@ const BODY = String.raw`<div class="wrap">
       </div>
     </div>
 
-    <!-- Compare toggle -->
-    <button class="compare-toggle" id="compareToggle" onclick="toggleCompare()">
-      Compare Free vs Premium
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6l4 4 4-4"/></svg>
-    </button>
+    `;
+
+const COMPARE_HTML = String.raw`<!-- Compare toggle -->
+    
 
     <div class="compare-table" id="compareTable">
       <table>
@@ -352,16 +360,17 @@ const BODY = String.raw`<div class="wrap">
 
   </div><!-- /buySection -->
 
-</div><!-- /wrap -->
+`;
 
-<div class="toast" id="toast"></div>`;
-
-export const metadata = {
-  alternates: { canonical: "https://hesych.com/upgrade" },
-  title: 'Upgrade to Pro — Hesych',
-  description: 'Unlock unlimited items, health score, advanced generator and more with Hesych Pro.',
-};
 
 export default function UpgradePage() {
-  return <LegalPage css={CSS} body={BODY} />;
+  return (
+    <UpgradeClient
+      css={CSS}
+      headHtml={HEAD_HTML}
+      activatedHtml={ACTIVATED_HTML}
+      buyHtml={BUY_HTML}
+      compareHtml={COMPARE_HTML}
+    />
+  );
 }
