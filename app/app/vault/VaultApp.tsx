@@ -47,8 +47,6 @@ import type { ShareLogEntry } from "../../../lib/types";
 import type { ItemSaveInput } from "./ctx";
 import {
   disableBiometric,
-  hasBioSession,
-  isBiometricEnabled,
   isBiometricSupported,
   isPrfEnabled,
   refreshPrfSession,
