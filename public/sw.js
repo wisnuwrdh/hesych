@@ -1,111 +1,89 @@
-// sw.js — Hesych Service Worker
-// Offline-first caching strategy
+// Hesych Service Worker — PWA offline support
+//
+// Strategy:
+//   - Hashed static assets & icons  → cache-first (immutable content)
+//   - Documents / navigations       → network-first, cache fallback
+//   - /api/* and build-info.json    → always network (never cached)
+//
+// NOTE for maintainers: clearing site data wipes this cache AND the vault's
+// biometric registration — the update banner in-app is the safe upgrade path.
 
-// BUMP versi ini setiap kali deploy agar cache lama otomatis dihapus
-// Format: 'hesych-v{major}.{minor}' — contoh: v1.1, v1.2, v2.0
-// H1 FIX: bumped to v1.5 — app.js/app.css/share.js/share.css extracted from HTML
-// v1.6: force cache bust — hidden class !important + bio session fix
-// v1.8: clean URLs — removed .html extensions
-const CACHE_NAME = 'hesych-v1.8';
+const VERSION = "hesych-v1";
+const RUNTIME_CACHE = `${VERSION}-runtime`;
 
-const ASSETS = [
-  '/app',
-  '/app.js',
-  '/app.css',
-  '/upgrade',
-  '/share',
-  '/share.js',
-  '/share.css',
-  '/privacy',
-  '/terms',
-  '/manifest.json',
-  '/og-image.png',
-  '/icon-192.png',
-  '/icon-512.png',
-];
-
-// Install: cache core assets
-self.addEventListener('install', event => {
+self.addEventListener("install", () => {
   self.skipWaiting();
+});
+
+self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
+    (async () => {
+      const keys = await caches.keys();
+      await Promise.all(
+        keys.filter((k) => k !== RUNTIME_CACHE).map((k) => caches.delete(k)),
+      );
+      await self.clients.claim();
+    })(),
   );
 });
 
-// Activate: delete old caches
-self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(
-        keys
-          .filter(key => key.startsWith('hesych-') && key !== CACHE_NAME)
-          .map(key => caches.delete(key))
-      )
-    ).then(() => self.clients.claim())
+function isStaticAsset(url) {
+  return (
+    url.pathname.startsWith("/_next/static/") ||
+    url.pathname.startsWith("/favicons/") ||
+    url.pathname.startsWith("/fonts/") ||
+    /\.(png|jpg|jpeg|webp|svg|ico|woff2?)$/.test(url.pathname)
   );
-});
+}
 
-// Fetch: network-first untuk HTML, cache-first untuk assets
-self.addEventListener('fetch', event => {
-  const url = new URL(event.request.url);
+self.addEventListener("fetch", (event) => {
+  const req = event.request;
+  if (req.method !== "GET") return;
 
-  // Lewati API calls
-  if (url.pathname.startsWith('/api/')) return;
-
-  // Lewati request lintas origin
+  const url = new URL(req.url);
   if (url.origin !== location.origin) return;
+  if (url.pathname.startsWith("/api/")) return;
+  if (url.pathname === "/build-info.json") return; // update-check: selalu network
 
-  const isHTML = event.request.destination === 'document'
-    || event.request.headers.get('accept')?.includes('text/html');
-
-  if (isHTML) {
-    // Network-first: selalu ambil versi terbaru, fallback ke cache jika offline
-    // M4 FIX: only cache valid same-origin responses (status 200, type basic/default)
+  // ── Static assets: cache-first ──
+  if (isStaticAsset(url)) {
     event.respondWith(
-      fetch(event.request)
-        .then(response => {
-          if (
-            response &&
-            response.status === 200 &&
-            (response.type === 'basic' || response.type === 'default')
-          ) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-          }
-          return response;
-        })
-        .catch(() => caches.match(event.request) || caches.match('/app'))
+      (async () => {
+        const cache = await caches.open(RUNTIME_CACHE);
+        const hit = await cache.match(req);
+        if (hit) return hit;
+        try {
+          const res = await fetch(req);
+          if (res.ok) cache.put(req, res.clone());
+          return res;
+        } catch {
+          return new Response("", { status: 504 });
+        }
+      })(),
     );
-  } else {
-    // Cache-first untuk assets (icon, gambar, manifest)
-    event.respondWith(
-      caches.match(event.request).then(cached => {
-        if (cached) return cached;
-        return fetch(event.request).then(response => {
-          // M4 FIX: validate integrity — only cache complete, same-origin responses
-          if (
-            response &&
-            response.status === 200 &&
-            (response.type === 'basic' || response.type === 'default') &&
-            response.headers.get('content-length') !== '0'
-          ) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-          }
-          return response;
-        }).catch(() => {
-          if (event.request.destination === 'document') {
-            return caches.match('/app');
-          }
-        });
-      })
-    );
+    return;
   }
-});
 
-// Message: terima perintah force update dari halaman
-self.addEventListener('message', event => {
-  if (event.data?.type === 'SKIP_WAITING') {
-    self.skipWaiting();
+  // ── Dokumen/navigasi: network-first dengan fallback cache ──
+  const accept = req.headers.get("accept") || "";
+  if (req.mode === "navigate" || accept.includes("text/html")) {
+    event.respondWith(
+      (async () => {
+        try {
+          const res = await fetch(req);
+          if (res.ok && res.type === "basic") {
+            const cache = await caches.open(RUNTIME_CACHE);
+            cache.put(req, res.clone());
+          }
+          return res;
+        } catch {
+          const cached = await caches.match(req, { cacheName: RUNTIME_CACHE });
+          return (
+            cached ||
+            new Response("Offline", { status: 503, headers: { "Content-Type": "text/plain" } })
+          );
+        }
+      })(),
+    );
   }
 });

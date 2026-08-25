@@ -133,13 +133,14 @@ export async function POST(req: Request) {
 
   // ── list devices (only for an already-registered device) ──
   if (action === "list") {
+    // Pemilik key berhak melihat daftar device-nya — termasuk dari device
+    // ke-4 yang belum terdaftar (agar bisa remove satu lalu aktivasi).
     if (!DEVICE_ID_RE.test(deviceId)) {
       return NextResponse.json({ error: "Missing or invalid deviceId" }, { status: 400 });
     }
+    const gum = await verifyGumroadKey(license);
+    if (!gum.valid) return NextResponse.json(gum, { status: 403 });
     const devices = await getDevices();
-    if (!devices.some((d) => d.device_id === deviceId)) {
-      return NextResponse.json({ error: "Device not authorized for this license" }, { status: 403 });
-    }
     return NextResponse.json({ devices });
   }
 

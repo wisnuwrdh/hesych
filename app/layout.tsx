@@ -23,6 +23,17 @@ export const metadata: Metadata = {
   },
 };
 
+// Register the PWA service worker (production only).
+function SWRegister() {
+  return (
+    <script
+      dangerouslySetInnerHTML={{
+        __html: `if('serviceWorker' in navigator && location.protocol==='https:'){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){})})}`,
+      }}
+    />
+  );
+}
+
 // Apply persisted theme before first paint to avoid a flash of the wrong theme.
 function ThemeScript() {
   return (
@@ -40,6 +51,7 @@ export default function RootLayout({
   return (
     <html lang="en" data-theme="dark">
       <head>
+        <SWRegister />
         <ThemeScript />
       </head>
       <body className="min-h-full antialiased">{children}</body>

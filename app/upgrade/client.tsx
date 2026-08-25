@@ -4,7 +4,7 @@
 // verbatim legacy markup; React adds the license activation form, honest
 // device-limit handling, and a proper activated state.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { t } from "../../lib/i18n";
 import {
   activate as activateLicense,
@@ -76,10 +76,16 @@ export function UpgradeClient({
   buyHtml: string;
   compareHtml: string;
 }) {
-  const [status, setStatus] = useState<"buy" | "active">(() =>
-    licenseIsActive() ? "active" : "buy",
-  );
-  const [meta, setMeta] = useState(() => getLicenseMeta());
+  const [status, setStatus] = useState<"buy" | "active">("buy");
+  const [meta, setMeta] = useState<ReturnType<typeof getLicenseMeta>>(null);
+
+  // localStorage hanya tersedia di client — flip setelah mount agar SSR aman
+  useEffect(() => {
+    if (licenseIsActive()) {
+      setStatus("active");
+      setMeta(getLicenseMeta());
+    }
+  }, []);
   const [key, setKey] = useState("");
   const [busy, setBusy] = useState(false);
   const [errKey, setErrKey] = useState<string | null>(null);
