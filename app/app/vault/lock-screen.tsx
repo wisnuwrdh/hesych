@@ -4,35 +4,24 @@ import { useEffect, useState } from "react";
 import { t } from "../../../lib/i18n";
 import { MAX_ATTEMPTS } from "../../../lib/constants";
 import { getStrengthLabel, scorePassword } from "../../../lib/password";
-import {
-  isBiometricEnabled,
-  isBiometricSupported,
-  unlockWithBiometric,
-} from "../../../lib/bio";
 import type { LockoutState } from "../../../lib/auth";
-import { FingerprintIcon } from "./icons";
 
 export function LockScreen({
   firstTime,
   lockout,
   onPasswordSubmit,
-  onBioUnlock,
   onReset,
-  showToast,
 }: {
   firstTime: boolean;
   lockout: LockoutState;
   onPasswordSubmit: (pw: string, isSetup: boolean) => Promise<boolean>;
-  onBioUnlock: (pw: string, prfOutput: ArrayBuffer | null) => Promise<void>;
   onReset: () => void;
-  showToast: (msg: string, type?: "ok" | "err" | "warn") => void;
 }) {
   const [pw, setPw] = useState("");
   const [confirm, setConfirm] = useState("");
   const [msg, setMsg] = useState("");
   const [msgType, setMsgType] = useState<"" | "err" | "warn">("");
   const [working, setWorking] = useState(false);
-  const [bioBusy, setBioBusy] = useState(false);
   const [secs, setSecs] = useState(() =>
     Math.max(0, Math.ceil((lockout.lockedUntil - Date.now()) / 1000)),
   );
@@ -47,8 +36,6 @@ export function LockScreen({
     return () => clearInterval(iv);
   }, [secs]);
 
-  const bioSupported = isBiometricSupported() && isBiometricEnabled();
-  const showBio = !firstTime && bioSupported;
   const score = firstTime ? scorePassword(pw) : 0;
 
   const doSubmit = async () => {
@@ -96,23 +83,6 @@ export function LockScreen({
       setMsgType("err");
     } finally {
       setWorking(false);
-    }
-  };
-
-  const doBio = async () => {
-    if (bioBusy || locked) return;
-    setBioBusy(true);
-    try {
-      const res = await unlockWithBiometric();
-      if (res.ok && res.password) {
-        await onBioUnlock(res.password, res.prfOutput);
-      } else if (res.expiredCanceled) {
-        showToast(t("bio.expired"), "warn");
-      } else {
-        showToast(t("bio.failed"), "err");
-      }
-    } finally {
-      setBioBusy(false);
     }
   };
 
@@ -246,18 +216,6 @@ export function LockScreen({
           </div>
         )}
 
-        {showBio && (
-          <button
-            type="button"
-            className="btn-bio"
-            id="bioBtn"
-            disabled={locked || bioBusy}
-            onClick={doBio}
-          >
-            <FingerprintIcon width={15} height={15} />
-            <span>{t("bio.btnUnlock")}</span>
-          </button>
-        )}
 
         <div className="attempt-dots" id="dots">
           {Array.from({ length: MAX_ATTEMPTS }).map((_, i) => (

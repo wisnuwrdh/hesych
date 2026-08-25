@@ -40,10 +40,4 @@ export const STORAGE_KEYS = {
   lastLocalBackup: "hesych_last_backup",
   localBackupOn: "hesych_local_backup_on",
   syncTs: "hesych_sync_ts",
-  bioCredId: "vault_bio_cred_id",
-  bioEnabled: "vault_bio_enabled",
-  bioPrf: "vault_bio_prf",
-  bioSession: "vault_bio_session",
-  bioKey: "vault_bio_key",
-  bioExpiry: "vault_bio_expiry",
 } as const;

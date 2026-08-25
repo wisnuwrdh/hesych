@@ -251,7 +251,7 @@ const BODY = String.raw`<div class="wrap">
           <div class="feature-icon">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
-          <div><div class="feature-text">Everything in Free</div><div class="feature-sub">AES-256-GCM, biometric, HIBP, TOTP, expiry reminder, secret lock</div></div>
+          <div><div class="feature-text">Everything in Free</div><div class="feature-sub">AES-256-GCM, HIBP, TOTP, expiry reminder, secret lock</div></div>
         </li>
         <li class="feature">
           <div class="feature-icon">
@@ -333,7 +333,6 @@ const BODY = String.raw`<div class="wrap">
         <tbody>
           <tr><td>Local password storage</td><td><span class="tick">✓</span></td><td><span class="tick">✓</span></td></tr>
           <tr><td>AES-256-GCM encryption</td><td><span class="tick">✓</span></td><td><span class="tick">✓</span></td></tr>
-          <tr><td>Biometric unlock</td><td><span class="tick">✓</span></td><td><span class="tick">✓</span></td></tr>
           <tr><td>HIBP breach check</td><td><span class="tick">✓</span></td><td><span class="tick">✓</span></td></tr>
           <tr><td>TOTP / 2FA storage</td><td><span class="tick">✓</span></td><td><span class="tick">✓</span></td></tr>
           <tr><td>Password generator</td><td><span class="tick">✓</span></td><td><span class="tick">✓</span></td></tr>

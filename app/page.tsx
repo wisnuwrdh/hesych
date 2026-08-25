@@ -5,7 +5,6 @@ import StandaloneRedirect from "./StandaloneRedirect";
 const compareRows = [
   { label: "Store passwords locally", free: true, pro: true },
   { label: "AES-256-GCM encryption", free: true, pro: true },
-  { label: "Biometric unlock", free: true, pro: true },
   { label: "HIBP breach check", free: true, pro: true },
   { label: "TOTP / 2FA storage", free: true, pro: true },
   { label: "Password Expiry Reminder", free: true, pro: true },
@@ -79,23 +78,6 @@ const features = [
       >
         <circle cx="12" cy="12" r="9" />
         <path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18" />
-      </svg>
-    ),
-  },
-  {
-    title: "Biometric Unlock",
-    desc: "Face ID and fingerprint. Master password only needed for first-run and re-auth.",
-    svg: (
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <rect x="6" y="2" width="12" height="20" rx="2" />
-        <circle cx="12" cy="17" r="1.2" fill="currentColor" />
       </svg>
     ),
   },

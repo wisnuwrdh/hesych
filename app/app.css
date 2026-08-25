@@ -168,25 +168,6 @@ svg{display:block;flex-shrink:0}
 .btn-primary:active{transform:scale(.98);opacity:.85}
 .btn-primary:disabled{opacity:.3;cursor:not-allowed}
 
-/* ===== BIOMETRIC BUTTON ===== */
-.btn-bio{
-  width:100%;padding:11px;
-  border:1px solid var(--border);
-  border-radius:var(--radius);
-  background:transparent;
-  color:var(--sub);
-  font-family:var(--sans);font-size:13px;font-weight:500;
-  cursor:pointer;
-  margin-top:6px;
-  display:none;align-items:center;justify-content:center;gap:8px;
-  transition:background .15s,border-color .15s,color .15s;
-}
-.btn-bio:hover{background:var(--surface);color:var(--text);border-color:var(--border-focus)}
-.btn-bio:active{transform:scale(.98)}
-.btn-bio:disabled{opacity:.4;pointer-events:none}
-.btn-bio.loading{pointer-events:none}
-.icon-btn.bio-active{color:var(--accent);border-color:var(--accent);background:var(--accent-glow)}
-
 /* ===== UNLOCK SPINNER ===== */
 .btn-primary.loading{
   display:flex;align-items:center;justify-content:center;gap:8px;
@@ -2114,7 +2095,7 @@ svg{display:block;flex-shrink:0}
   border-radius:8px;padding:10px 12px;
 }
 
-/* ===== SHARE VIEWER LOGO (ported from legacy share.css) + bio-active ===== */
+/* ===== SHARE VIEWER LOGO (ported from legacy share.css) ===== */
 .logo{display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:28px}
 .logo-mark{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .logo-img{display:block;object-fit:contain;pointer-events:none;-webkit-touch-callout:none;user-select:none}
@@ -2123,4 +2104,3 @@ svg{display:block;flex-shrink:0}
 [data-theme="light"] .logo-img-light{display:block}
 .logo-name{font-size:18px;font-weight:600;letter-spacing:-.3px}
 .logo-sub{font-size:11px;color:var(--dim);font-family:var(--mono)}
-.icon-btn.bio-active{color:var(--accent);border-color:var(--accent);background:var(--accent-dim);}

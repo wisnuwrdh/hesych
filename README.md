@@ -37,10 +37,9 @@
 | Storage | IndexedDB (`VaultDB`), rows encrypted at rest; metadata encrypted since schema v6 |
 | Verifier | Encrypted "vault OK" marker — the server-equivalent check happens **on device** |
 | Network | Data endpoints: **none**. Only outbound calls: HIBP range API (5-char hash prefix) and license activation |
-| Biometrics | WebAuthn platform authenticator wraps/unlocks per browser+device; credential never leaves the device |
 | Trade-off | Forget your master password = data unrecoverable. No backdoor by design |
 
-> Clearing site data intentionally wipes biometric registration and (with full wipe) the vault itself — always keep an encrypted export somewhere safe.
+> Clearing site data with a full wipe removes the vault itself — always keep an encrypted export somewhere safe.
 
 ---
 
@@ -75,8 +74,8 @@ npm run typecheck    # tsc --noEmit
 npm run lint         # eslint
 ```
 
-> Some features (biometrics, local auto-backup folder picker) require a
-> Chromium-based browser and a secure context (HTTPS or localhost).
+> Local auto-backup folder picker requires a Chromium-based browser in a
+> secure context (HTTPS or localhost).
 
 ---
 
@@ -115,20 +114,11 @@ through `/api/verify-license` so refunds/chargebacks are honored automatically.
 
 ---
 
-## 🔑 Biometric unlock notes
-
-- Activation: unlock vault → tap the fingerprint icon in the appbar → confirm
-  the WebAuthn prompt (device screen-lock required)
-- Credentials are **per browser + per domain** — activate separately in each
-  browser you use
-- Clearing site data removes the registration (and, on full wipe, the vault) —
-  keep encrypted backups
-
 ---
 
 ## 🗺️ Roadmap / Known issues
 
-- [ ] [#1](https://github.com/wisnuwrdh/hesych/issues/1) — Biometric unlock affordance on lock screen when supported-but-not-enabled
+- [x] Biometric unlock feature **removed entirely** (see [#1](https://github.com/wisnuwrdh/hesych/issues/1))
 - [ ] Multi-device cloud sync (encrypted snapshot merge; D1 `vault_sync` foundation planned)
 - [ ] Google Drive auto-backup (pending scope decision on Google's restricted-scope verification)
 - [ ] Content cluster: feature deep-dives & comparisons

@@ -45,14 +45,6 @@ import {
 } from "../../../lib/share";
 import type { ShareLogEntry } from "../../../lib/types";
 import type { ItemSaveInput } from "./ctx";
-import {
-  disableBiometric,
-  isBiometricSupported,
-  isPrfEnabled,
-  refreshPrfSession,
-  setBioSession,
-  getCredIdB64,
-} from "../../../lib/bio";
 import { isPasswordOld } from "../../../lib/format";
 import { isEnabled as localBackupEnabled, writeSnapshot as writeLocalSnapshot } from "../../../lib/localbackup";
 import { isItemSecretLocked } from "../../../lib/secretlock";
@@ -291,9 +283,6 @@ export function VaultApp() {
           await enterVault(db, key);
           setFirstTime(false); // only set after vault is successfully open
           setLockout(resetAttempts());
-          if (isBiometricSupported()) {
-            setBioSession(pw, null, false, { forceLegacy: true }).catch(() => {});
-          }
           return true;
         }
         // unlock
@@ -312,8 +301,6 @@ export function VaultApp() {
         const db = await openDB();
         await enterVault(db, key);
         setLockout(resetAttempts());
-        const credId = getCredIdB64();
-        setBioSession(pw, credId, isPrfEnabled(), { forceLegacy: true }).catch(() => {});
         return true;
       } catch (err) {
         console.error("handlePasswordSubmit error", err);
@@ -323,26 +310,6 @@ export function VaultApp() {
       }
     },
     [lockout, enterVault],
-  );
-
-  const handleBioUnlock = useCallback(
-    async (pw: string, prfOutput: ArrayBuffer | null): Promise<void> => {
-      const salt = getSalt();
-      const key = await deriveKey(pw, salt);
-      if (!(await checkVerifier(pw, salt))) {
-        pushToast(t("bio.failed"), "err");
-        return;
-      }
-      const db = await openDB();
-      await enterVault(db, key);
-      setLockout(resetAttempts());
-      if (prfOutput) {
-        refreshPrfSession(pw, prfOutput).catch(() => {});
-      } else {
-        setBioSession(pw, null, false, { forceLegacy: true }).catch(() => {});
-      }
-    },
-    [enterVault, pushToast],
   );
 
   // ===== reset =====
@@ -355,7 +322,6 @@ export function VaultApp() {
     }
     keyRef.current = null;
     resetDBCache(); // flush stale singleton so next openDB() creates a fresh connection
-    disableBiometric();
     localStorage.removeItem("vault_salt");
     localStorage.removeItem("vault_ver");
     localStorage.removeItem("vault_ver_magic");
@@ -1072,9 +1038,7 @@ export function VaultApp() {
           firstTime={firstTime}
           lockout={lockout}
           onPasswordSubmit={handlePasswordSubmit}
-          onBioUnlock={handleBioUnlock}
           onReset={() => setResetOpen(true)}
-          showToast={pushToast}
         />
       ) : (
         <AppShell onLock={doLock} />

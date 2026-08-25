@@ -14,12 +14,6 @@ import {
 } from "../../../lib/license";
 import { getDeviceId } from "../../../lib/device";
 import {
-  disableBiometric,
-  isBiometricEnabled,
-  isBiometricSupported,
-  registerBiometric,
-} from "../../../lib/bio";
-import {
   disableLocalBackup,
   fsSupported,
   isEnabled as lbEnabled,
@@ -33,7 +27,6 @@ import { DetailPanel, ItemCard } from "./item-card";
 import { FILTERS, useVault, type VaultFilter } from "./ctx";
 import { AdvFilterBar } from "./adv-filter";
 import {
-  FingerprintIcon,
   LockIcon,
   MoonIcon,
   MoreIcon,
@@ -323,40 +316,6 @@ export function AppShell({ onLock }: { onLock: () => void }) {
   const ctx = useVault();
   const [licOpen, setLicOpen] = useState(false);
   const [lbOpen, setLbOpen] = useState(false);
-  const [bioActive, setBioActive] = useState(() => isBiometricEnabled());
-  const [note, setNote] = useState<{ msg: string; type: string } | null>(null);
-  const noteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const showNote = (msg: string, type: string = "ok") => {
-    setNote({ msg, type });
-    if (noteTimer.current) clearTimeout(noteTimer.current);
-    noteTimer.current = setTimeout(() => setNote(null), 2600);
-  };
-
-  const lastBioTap = useRef(0);
-  const toggleBio = async () => {
-    if (!isBiometricSupported()) return;
-    // rapid-click guard: cegah double-tap yang membuat enable -> langsung disable
-    if (Date.now() - lastBioTap.current < 1500) return;
-    lastBioTap.current = Date.now();
-    if (isBiometricEnabled()) {
-      disableBiometric();
-      setBioActive(false);
-      showNote(t("bio.disabled"));
-      return;
-    }
-    const res = await registerBiometric();
-    if (res.ok) {
-      setBioActive(true);
-      showNote(t("bio.enabled"));
-    } else if (res.canceled) {
-      console.warn("biometric setup canceled:", res.errorName);
-      showNote(t("bio.setupCanceled"), "warn");
-    } else {
-      console.warn("biometric setup failed:", res.errorName);
-      showNote(t("bio.failed"), "err");
-    }
-  };
   const pro = ctx.isPremium();
   const showLbReminder = reminderDue(ctx.itemCount);
   const desktopCount = ctx.counts[ctx.filter] ?? ctx.list.length;
@@ -400,16 +359,7 @@ export function AppShell({ onLock }: { onLock: () => void }) {
           </div>
           <div className="bar-actions">
             <ThemeToggle />
-            {isBiometricSupported() ? (
-              <button
-                className={"icon-btn" + (bioActive ? " bio-active" : "")}
-                id="bioToggleBtn"
-                title={bioActive ? t("bio.btnDisable") : t("bio.btnSetup")}
-                onClick={() => void toggleBio()}
-              >
-                <FingerprintIcon width={15} height={15} />
-              </button>
-            ) : null}
+
             <button className="icon-btn" id="headerLockBtn" onClick={onLock} title={t("app.lockTitle")}>
               <LockIcon width={15} height={15} />
             </button>
@@ -420,11 +370,6 @@ export function AppShell({ onLock }: { onLock: () => void }) {
               onOpenLicense={() => setLicOpen(true)}
             />
             {lbOpen ? <LocalBackupModal onClose={() => setLbOpen(false)} /> : null}
-            {note ? (
-              <div className={"toast show " + note.type} style={{ bottom: 120 }}>
-                {note.msg}
-              </div>
-            ) : null}
             {licOpen ? <LicenseModal onClose={() => setLicOpen(false)} /> : null}
           </div>
         </div>
@@ -547,7 +492,6 @@ function DevicesBox({
 }
 
 // ===== LICENSE (Premium activation, device registry max 3) =====
-
 
 function LicenseModal({ onClose }: { onClose: () => void }) {
   const meta = getLicenseMeta();
