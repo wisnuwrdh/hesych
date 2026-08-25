@@ -8,6 +8,7 @@ import {
   isPasswordOld,
 } from "../../../lib/format";
 import { getSecretLock } from "../../../lib/secretlock";
+import { getFaviconUrl } from "../../../lib/favicon";
 import { generateTOTP, isValidBase32, totpSecsRemaining } from "../../../lib/totp";
 import type { VaultItem } from "../../../lib/types";
 import { getCategoryMeta, useVault } from "./ctx";
@@ -376,7 +377,10 @@ function ItemDetails({ item }: { item: VaultItem }) {
 
 export function ItemCard({ item }: { item: VaultItem }) {
   const ctx = useVault();
+  const [favFailed, setFavFailed] = useState(false);
   const letter = item.title.charAt(0).toUpperCase() || "?";
+  const favUrl = getFaviconUrl(item.title);
+  const showFav = favUrl !== null && !favFailed;
   const cat = getCategoryMeta(item.category);
   const isFav = item.favorite;
   const lock = getSecretLock(item.id);
@@ -395,8 +399,20 @@ export function ItemCard({ item }: { item: VaultItem }) {
         style={{ userSelect: "none" }}
         onClick={onHeaderClick}
       >
-        <div className={`item-avatar c${item.color || 0}`}>
-          {letter}
+        <div
+          className={`item-avatar c${item.color || 0}${showFav ? " has-favicon" : ""}`}
+        >
+          {showFav ? (
+            <img
+              className="fav-img"
+              src={favUrl}
+              alt={letter}
+              loading="lazy"
+              onError={() => setFavFailed(true)}
+            />
+          ) : (
+            letter
+          )}
           {isFav ? <span className="fav-dot" /> : null}
         </div>
         <div className="item-info">
@@ -451,6 +467,9 @@ export function DetailPanel() {
   const item = ctx.detailId
     ? ctx.items.find((i) => i.id === ctx.detailId) || null
     : null;
+  const [favFailed, setFavFailed] = useState(false);
+  const favUrl = item ? getFaviconUrl(item.title) : null;
+  const showFav = favUrl !== null && !favFailed;
   if (!item) {
     return (
       <div className="detail-panel">
@@ -464,8 +483,19 @@ export function DetailPanel() {
   return (
     <div className="detail-panel">
       <div className="detail-panel-header">
-        <div className={`detail-panel-avatar c${item.color || 0}`}>
-          {item.title.charAt(0).toUpperCase() || "?"}
+        <div
+          className={`detail-panel-avatar c${item.color || 0}${showFav ? " has-favicon" : ""}`}
+        >
+          {showFav ? (
+            <img
+              className="fav-img"
+              src={favUrl}
+              alt=""
+              onError={() => setFavFailed(true)}
+            />
+          ) : (
+            item.title.charAt(0).toUpperCase() || "?"
+          )}
         </div>
         <div>
           <div className="detail-panel-title">{item.title}</div>
