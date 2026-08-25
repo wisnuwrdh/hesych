@@ -1064,9 +1064,6 @@ export function VaultApp() {
     ],
   );
 
-  const bioAvailable =
-    !firstTime && isBiometricEnabled() && hasBioSession().exists;
-
   return (
     <VaultCtx.Provider value={ctx}>
       {phase === "locked" ? (
@@ -1079,7 +1076,7 @@ export function VaultApp() {
           showToast={pushToast}
         />
       ) : (
-        <AppShell onLock={doLock} bioOn={bioAvailable} />
+        <AppShell onLock={doLock} />
       )}
 
       <EditSheet />

@@ -319,7 +319,7 @@ function OverflowMenu({
   );
 }
 
-export function AppShell({ onLock, bioOn }: { onLock: () => void; bioOn: boolean }) {
+export function AppShell({ onLock }: { onLock: () => void }) {
   const ctx = useVault();
   const [licOpen, setLicOpen] = useState(false);
   const [lbOpen, setLbOpen] = useState(false);
