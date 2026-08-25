@@ -37,6 +37,7 @@ export function LockScreen({
     Math.max(0, Math.ceil((lockout.lockedUntil - Date.now()) / 1000)),
   );
   const [pwVisible, setPwVisible] = useState(false);
+  const [confirmVisible, setConfirmVisible] = useState(false);
   const attempts = lockout.attempts;
   const locked = secs > 0;
 
@@ -181,21 +182,41 @@ export function LockScreen({
           <div className="lock-field-group" id="confirmWrap">
             <div className="pw-field-label">{t("lock.confirmPwLabel")}</div>
             <div className="input-wrap">
-              <input
-                type="password"
-                id="masterConfirm"
-                placeholder={t("lock.confirmPwPh")}
-                autoComplete="new-password"
-                value={confirm}
-                disabled={working}
-                onChange={(e) => {
-                  setConfirm(e.target.value);
-                  setMsg("");
-                  setMsgType("");
-                }}
-                onKeyDown={(e) => e.key === "Enter" && doSubmit()}
-              />
-            </div>
+      <input
+        type={confirmVisible ? "text" : "password"}
+        id="masterConfirm"
+        placeholder={t("lock.confirmPwPh")}
+        autoComplete="new-password"
+        value={confirm}
+        disabled={working}
+        onChange={(e) => {
+          setConfirm(e.target.value);
+          setMsg("");
+          setMsgType("");
+        }}
+        onKeyDown={(e) => e.key === "Enter" && doSubmit()}
+      />
+      <button
+        type="button"
+        className="eye-btn"
+        aria-label={confirmVisible ? "Hide" : "Show"}
+        onClick={() => setConfirmVisible((v) => !v)}
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+          <circle cx="12" cy="12" r="3" />
+        </svg>
+      </button>
+    </div>
           </div>
         )}
 
