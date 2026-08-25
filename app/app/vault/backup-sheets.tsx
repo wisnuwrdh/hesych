@@ -31,6 +31,8 @@ export function ExportSheet() {
   const [mode, setMode] = useState<"master" | "custom">("master");
   const [pw, setPw] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [showPw, setShowPw] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [msg, setMsg] = useState<{ text: string; err?: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -94,7 +96,7 @@ export function ExportSheet() {
               <div className="field-label">{t("encExport.pwLabel")}</div>
               <div className="field-pw">
                 <input
-                  type="password"
+                  type={ showPw ? "text" : "password" }
                   placeholder={t("encExport.pwPh")}
                   autoComplete="new-password"
                   value={pw}
@@ -103,10 +105,7 @@ export function ExportSheet() {
                 <button
                   type="button"
                   className="pw-eye"
-                  onClick={(e) => {
-                    const input = e.currentTarget.previousElementSibling;
-                    if (input instanceof HTMLInputElement) input.type = input.type === "password" ? "text" : "password";
-                  }}
+                  onClick={() => setShowPw(v => !v)}
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
@@ -119,7 +118,7 @@ export function ExportSheet() {
               <div className="field-label">{t("encExport.confirmLabel")}</div>
               <div className="field-pw">
                 <input
-                  type="password"
+                  type={ showConfirm ? "text" : "password" }
                   placeholder={t("encExport.confirmPh")}
                   autoComplete="new-password"
                   value={confirm}
@@ -128,10 +127,7 @@ export function ExportSheet() {
                 <button
                   type="button"
                   className="pw-eye"
-                  onClick={(e) => {
-                    const input = e.currentTarget.previousElementSibling;
-                    if (input instanceof HTMLInputElement) input.type = input.type === "password" ? "text" : "password";
-                  }}
+                  onClick={() => setShowConfirm(v => !v)}
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
@@ -171,6 +167,8 @@ export function ImportSheet() {
   const [file, setFile] = useState<File | null>(null);
   const [mode, setMode] = useState<"merge" | "replace">("merge");
   const [pw, setPw] = useState("");
+
+const [showImportPw, setShowImportPw] = useState(false);
   const [msg, setMsg] = useState<{ text: string; err?: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
   const needsPw = bundle?.pwMode === "custom";
@@ -271,14 +269,11 @@ export function ImportSheet() {
           <div className="field">
             <div className="field-label">{t("encExport.pwLabel")}</div>
             <div className="field-pw">
-              <input type="password" placeholder="Custom backup password" value={pw} onChange={(e) => setPw(e.target.value)} />
+              <input type={ showImportPw ? "text" : "password" } placeholder="Custom backup password" value={pw} onChange={(e) => setPw(e.target.value)} />
               <button
                 type="button"
                 className="pw-eye"
-                onClick={(e) => {
-                  const input = e.currentTarget.previousElementSibling;
-                  if (input instanceof HTMLInputElement) input.type = input.type === "password" ? "text" : "password";
-                }}
+                onClick={() => setShowImportPw(v => !v)}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />

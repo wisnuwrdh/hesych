@@ -46,6 +46,7 @@ export function ShareSheet() {
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [pwVisible, setPwVisible] = useState(false);
 
   const item = ctx.shareItem;
   if (!ctx.shareOpen || !item) return null;
@@ -127,7 +128,7 @@ export function ShareSheet() {
               <div className="field-label">{t("share.passphraseLbl")}</div>
               <div className="field-pw">
                 <input
-                  type="password"
+                  type={ pwVisible ? "text" : "password" }
                   placeholder={t("share.passphrasePh")}
                   autoComplete="new-password"
                   value={pw}
@@ -136,11 +137,7 @@ export function ShareSheet() {
                 <button
                   type="button"
                   className="pw-eye"
-                  onClick={(e) => {
-                    const el = e.currentTarget.previousElementSibling;
-                    if (el instanceof HTMLInputElement)
-                      el.type = el.type === "password" ? "text" : "password";
-                  }}
+                  onClick={() => setPwVisible((v) => !v)}
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />

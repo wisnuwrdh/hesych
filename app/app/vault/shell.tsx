@@ -333,8 +333,12 @@ export function AppShell({ onLock }: { onLock: () => void }) {
     noteTimer.current = setTimeout(() => setNote(null), 2600);
   };
 
+  const lastBioTap = useRef(0);
   const toggleBio = async () => {
     if (!isBiometricSupported()) return;
+    // rapid-click guard: cegah double-tap yang membuat enable -> langsung disable
+    if (Date.now() - lastBioTap.current < 1500) return;
+    lastBioTap.current = Date.now();
     if (isBiometricEnabled()) {
       disableBiometric();
       setBioActive(false);
