@@ -350,8 +350,10 @@ export function AppShell({ onLock }: { onLock: () => void }) {
       setBioActive(true);
       showNote(t("bio.enabled"));
     } else if (res.canceled) {
-      showNote(t("bio.expired"), "warn");
+      console.warn("biometric setup canceled:", res.errorName);
+      showNote(t("bio.setupCanceled"), "warn");
     } else {
+      console.warn("biometric setup failed:", res.errorName);
       showNote(t("bio.failed"), "err");
     }
   };

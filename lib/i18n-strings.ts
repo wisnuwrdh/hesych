@@ -187,6 +187,7 @@ export const STRINGS = {
   "bio.enabled": "Biometric login enabled ✓",
   "bio.disabled": "Biometric login disabled",
   "bio.failed": "Biometric authentication failed",
+  "bio.setupCanceled": "Biometric setup canceled by browser. Make sure your phone has a screen lock, then try again.",
   "bio.setupFailed": "Failed to enable biometrics",
   "bio.expired": "Biometric session expired. Enter password",
   "bio.unlocking": "Unlocking with biometrics…",
