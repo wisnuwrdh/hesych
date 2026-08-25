@@ -29,14 +29,22 @@ for (const d of domains) {
     continue;
   }
   try {
-    const res = await fetch(
+    let buf = null;
+    // Sumber 1: Google s2
+    const r1 = await fetch(
       `https://www.google.com/s2/favicons?sz=64&domain=${encodeURIComponent(d)}`,
       { headers: { "User-Agent": "Mozilla/5.0" } },
     );
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const buf = Buffer.from(await res.arrayBuffer());
-    // Google s2 membalas PNG default 16px "globe" bila domain tak dikenal —
-    // file itu tetap disimpan (valid), ukurannya kecil.
+    if (r1.ok) buf = Buffer.from(await r1.arrayBuffer());
+    // Sumber 2 (fallback): DuckDuckGo icons
+    if (!buf || buf.length < 100) {
+      const r2 = await fetch(
+        `https://icons.duckduckgo.com/ip3/${encodeURIComponent(d)}.ico`,
+        { headers: { "User-Agent": "Mozilla/5.0" } },
+      );
+      if (r2.ok) buf = Buffer.from(await r2.arrayBuffer());
+    }
+    if (!buf) throw new Error("no source");
     writeFileSync(out, buf);
     ok++;
     console.log("  ✓", d);
