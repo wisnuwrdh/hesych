@@ -7,6 +7,7 @@ import {
   HIST_MAX,
   STORE_HANDLES,
   STORE_HISTORY,
+  STORE_VAULT_KEYS,
   STORE_ITEMS,
   STORE_SHARE_LOG,
 } from "./constants";
@@ -50,6 +51,9 @@ export function openDB(): Promise<IDBDatabase> {
       }
       if (!d.objectStoreNames.contains(STORE_HANDLES)) {
         d.createObjectStore(STORE_HANDLES);
+      }
+      if (!d.objectStoreNames.contains(STORE_VAULT_KEYS)) {
+        d.createObjectStore(STORE_VAULT_KEYS, { keyPath: "id" });
       }
     };
     req.onsuccess = () => resolve(req.result);
@@ -210,4 +214,41 @@ export async function shareLogDelete(
 
 export async function shareLogClear(db: IDBDatabase): Promise<void> {
   await withStore<void>(db, STORE_SHARE_LOG, "readwrite", (s) => s.clear());
+}
+
+// ── vault_keys (envelope DEK) ──────────────────────────────────────────────
+export interface VaultKeyRecord {
+  id: "dek";
+  pw_env: string; // JSON dari PwEnvelope {v,salt,wrap}
+  created_at: number;
+}
+
+export async function vaultKeysPut(rec: VaultKeyRecord): Promise<void> {
+  const db = await openDB();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE_VAULT_KEYS, "readwrite");
+    tx.objectStore(STORE_VAULT_KEYS).put(rec);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error ?? new Error("vault_keys put failed"));
+  });
+}
+
+export async function vaultKeysGet(): Promise<VaultKeyRecord | null> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_VAULT_KEYS, "readonly");
+    const req = tx.objectStore(STORE_VAULT_KEYS).get("dek");
+    tx.oncomplete = () => resolve((req.result as VaultKeyRecord) ?? null);
+    tx.onerror = () => reject(tx.error ?? new Error("vault_keys get failed"));
+  });
+}
+
+export async function vaultKeysClear(): Promise<void> {
+  const db = await openDB();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE_VAULT_KEYS, "readwrite");
+    tx.objectStore(STORE_VAULT_KEYS).clear();
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error ?? new Error("vault_keys clear failed"));
+  });
 }

@@ -9,13 +9,23 @@ import {
   resetAttempts,
   type LockoutState,
 } from "../../../lib/auth";
-import { IDLE_LOCK_MS } from "../../../lib/constants";
+import { IDLE_LOCK_MS, PBKDF2_ITERATIONS } from "../../../lib/constants";
 import {
-  deriveKey,
   decryptWith,
   type VaultKey,
 } from "../../../lib/crypto";
-import { getSalt, writeVerifierForKey, checkVerifier, isFirstTime } from "../../../lib/verifier";
+import { getSalt, checkVerifier } from "../../../lib/verifier";
+import {
+  createPasswordEnvelope,
+  generateRawDek,
+  importDek,
+  unwrapWithPassword,
+} from "../../../lib/envelope";
+import {
+  vaultKeysGet,
+  vaultKeysPut,
+  vaultKeysClear,
+} from "../../../lib/db";
 import {
   buildEncryptedRow,
   loadItems,
@@ -24,9 +34,17 @@ import {
   vaultSetFavorite,
   type EncryptedVaultRow,
 } from "../../../lib/vault";
-import { histAdd, openDB, dbPutItem, histGetAll, histDelete, resetDBCache } from "../../../lib/db";
-import { shareLogAdd, shareLogAll, shareLogDelete } from "../../../lib/db";
-import { reencryptVault } from "../../../lib/master";
+import {
+  histAdd,
+  openDB,
+  dbPutItem,
+  histGetAll,
+  histDelete,
+  resetDBCache,
+  shareLogAdd,
+  shareLogAll,
+  shareLogDelete,
+} from "../../../lib/db";
 import {
   exportMasterBackup,
   exportCustomBackup,
@@ -50,6 +68,8 @@ import { isEnabled as localBackupEnabled, writeSnapshot as writeLocalSnapshot } 
 import { isItemSecretLocked } from "../../../lib/secretlock";
 import type { VaultItem } from "../../../lib/types";
 import { LockScreen } from "./lock-screen";
+const textEnc = new TextEncoder();
+
 import { ConfirmModal, ToastHost, showGlobalToast, renderHtmlKey } from "./ui";
 import { SecretLockModal } from "./secret-lock-modal";
 import { AppShell } from "./shell";
@@ -66,7 +86,7 @@ type Phase = "locked" | "unlocked";
 
 export function VaultApp() {
   const [phase, setPhase] = useState<Phase>("locked");
-  const [firstTime, setFirstTime] = useState<boolean>(() => isFirstTime());
+  const [firstTime, setFirstTime] = useState(true);
   const [lockout, setLockout] = useState<LockoutState>(() => loadLockoutState());
   const [items, setItems] = useState<VaultItem[]>([]);
   const [filter, setFilter] = useState<VaultFilter>("all");
@@ -99,6 +119,8 @@ export function VaultApp() {
 
   const keyRef = useRef<VaultKey | null>(null);
   const dbRef = useRef<IDBDatabase | null>(null);
+  const dekKeyRef = useRef<VaultKey | null>(null);
+  const dekRawRef = useRef<Uint8Array | null>(null);
   const lastActiveRef = useRef(0);
   const occupiedRef = useRef(false);
 
@@ -276,13 +298,20 @@ export function VaultApp() {
       occupiedRef.current = true;
       try {
         if (isSetup) {
-          const salt = getSalt();
-          const key = await deriveKey(pw, salt);
-          await writeVerifierForKey(key);
+          const raw = generateRawDek();
+          const env = await createPasswordEnvelope(pw, raw);
+          await vaultKeysPut({
+            id: "dek",
+            pw_env: JSON.stringify(env),
+            created_at: Date.now(),
+          });
+          dekKeyRef.current = await importDek(raw);
+          dekRawRef.current = raw;
           const db = await openDB();
-          await enterVault(db, key);
+          await enterVault(db, dekKeyRef.current);
           setFirstTime(false); // only set after vault is successfully open
           setLockout(resetAttempts());
+          localStorage.removeItem("vault_ver"); // bersihkan penanda legacy
           return true;
         }
         // unlock
@@ -291,16 +320,56 @@ export function VaultApp() {
           setLockout(active);
           return false;
         }
-        const salt = getSalt();
-        const key = await deriveKey(pw, salt);
-        if (!(await checkVerifier(pw, salt))) {
+        let raw;
+        const rec = await vaultKeysGet();
+        if (rec) {
+          // jalur envelope baru
+          try {
+            raw = await unwrapWithPassword(JSON.parse(rec.pw_env), pw);
+          } catch {
+            const next = recordFail(active);
+            setLockout(next);
+            return false; // password salah
+          }
+        } else if (localStorage.getItem("vault_ver")) {
+          // migrasi sekali-jalan dari vault legacy (verifier PBKDF2)
+          const salt = getSalt();
+          if (!(await checkVerifier(pw, salt))) {
+            const next = recordFail(active);
+            setLockout(next);
+            return false;
+          }
+          const km = await crypto.subtle.importKey(
+            "raw",
+            textEnc.encode(pw),
+            "PBKDF2",
+            false,
+            ["deriveBits"],
+          );
+          raw = new Uint8Array(
+            await crypto.subtle.deriveBits(
+              { name: "PBKDF2", hash: "SHA-256", salt: salt, iterations: PBKDF2_ITERATIONS },
+              km,
+              256,
+            ),
+          );
+        } else {
           const next = recordFail(active);
           setLockout(next);
           return false;
         }
+        const env = await createPasswordEnvelope(pw, raw);
+        await vaultKeysPut({
+          id: "dek",
+          pw_env: JSON.stringify(env),
+          created_at: Date.now(),
+        });
+        dekKeyRef.current = await importDek(raw);
+        dekRawRef.current = raw;
         const db = await openDB();
-        await enterVault(db, key);
+        await enterVault(db, dekKeyRef.current);
         setLockout(resetAttempts());
+        localStorage.removeItem("vault_ver"); // migrasi selesai
         return true;
       } catch (err) {
         console.error("handlePasswordSubmit error", err);
@@ -322,6 +391,7 @@ export function VaultApp() {
     }
     keyRef.current = null;
     resetDBCache(); // flush stale singleton so next openDB() creates a fresh connection
+    void vaultKeysGet().catch(() => {}); // noop warm; actual wipe via deleteDatabase below
     localStorage.removeItem("vault_salt");
     localStorage.removeItem("vault_ver");
     localStorage.removeItem("vault_ver_magic");
@@ -336,7 +406,10 @@ export function VaultApp() {
     getSalt(); // fresh salt for the new vault
     await new Promise<void>((resolve) => {
       const req = indexedDB.deleteDatabase("VaultDB");
-      req.onsuccess = () => resolve();
+      req.onsuccess = () => {
+        void vaultKeysClear().catch(() => {});
+        resolve();
+      };
       req.onerror = () => resolve();
       req.onblocked = () => resolve();
     });
@@ -539,16 +612,24 @@ export function VaultApp() {
   const changeMasterPw = useCallback(
     async (oldPw: string, newPw: string): Promise<string | null> => {
       const db = dbRef.current;
-      const key = keyRef.current;
-      if (!db || !key) return "cp.failed";
-      const salt = getSalt();
-      if (!(await checkVerifier(oldPw, salt))) return "cp.wrongOld";
+      const rec = await vaultKeysGet();
+      if (!db || !rec || !keyRef.current) return "cp.failed";
+      let raw;
       try {
-        const newKey = await deriveKey(newPw, salt);
-        await reencryptVault(db, key, newKey);
-        await writeVerifierForKey(newKey);
-        keyRef.current = newKey;
-        await enterVault(db, newKey);
+        raw = await unwrapWithPassword(JSON.parse(rec.pw_env), oldPw);
+      } catch {
+        return "cp.wrongOld";
+      }
+      try {
+        const env = await createPasswordEnvelope(newPw, raw);
+        await vaultKeysPut({
+          id: "dek",
+          pw_env: JSON.stringify(env),
+          created_at: Date.now(),
+        });
+        dekKeyRef.current = await importDek(raw);
+        dekRawRef.current = raw;
+        await enterVault(db, dekKeyRef.current);
         return null;
       } catch (e) {
         console.warn("change master password", e);

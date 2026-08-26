@@ -1,10 +1,11 @@
 // ===== IndexedDB (must stay byte-compatible with legacy VaultDB v6) =====
 export const DB_NAME = "VaultDB";
-export const DB_VER = 7;
+export const DB_VER = 8;
 export const STORE_ITEMS = "items";
 export const STORE_HISTORY = "pw_history";
 export const STORE_SHARE_LOG = "share_log";
 export const STORE_HANDLES = "handles";
+export const STORE_VAULT_KEYS = "vault_keys";
 
 export const HIST_MAX = 10;
 export const ROW_META_V = 6;
