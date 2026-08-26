@@ -21,6 +21,7 @@ import {
   importDek,
   unwrapWithPassword,
 } from "../../../lib/envelope";
+import { listBiometrics, unlockWithBiometrics } from "../../../lib/biometric";
 import {
   vaultKeysGet,
   vaultKeysPut,
@@ -87,6 +88,7 @@ type Phase = "locked" | "unlocked";
 export function VaultApp() {
   const [phase, setPhase] = useState<Phase>("locked");
   const [firstTime, setFirstTime] = useState(true);
+  const [bootReady, setBootReady] = useState(false);
   const [lockout, setLockout] = useState<LockoutState>(() => loadLockoutState());
   const [items, setItems] = useState<VaultItem[]>([]);
   const [filter, setFilter] = useState<VaultFilter>("all");
@@ -120,9 +122,48 @@ export function VaultApp() {
   const keyRef = useRef<VaultKey | null>(null);
   const dbRef = useRef<IDBDatabase | null>(null);
   const dekKeyRef = useRef<VaultKey | null>(null);
-  const dekRawRef = useRef<Uint8Array | null>(null);
+  const dekRawRef = useRef<Uint8Array<ArrayBuffer> | null>(null);
   const lastActiveRef = useRef(0);
   const occupiedRef = useRef(false);
+  const [bioWrapCount, setBioWrapCount] = useState<number | null>(null);
+  const [dekRawState, setDekRawState] = useState<Uint8Array<ArrayBuffer> | null>(null);
+
+  const refreshBioWraps = useCallback(async () => {
+    try {
+      const wraps = await listBiometrics();
+      setBioWrapCount(wraps.length);
+    } catch {
+      setBioWrapCount(0);
+    }
+  }, []);
+
+  // Boot: deteksi apakah vault sudah punya password envelope.
+  useEffect(() => {
+    let alive = true;
+    const id = requestAnimationFrame(() => {
+      void (async () => {
+        try {
+          const rec = await vaultKeysGet();
+          if (!alive) return;
+          setFirstTime(!rec);
+          const wraps = await listBiometrics();
+          if (!alive) return;
+          setBioWrapCount(wraps.length);
+        } catch {
+          if (!alive) return;
+          setFirstTime(true);
+          setBioWrapCount(0);
+        } finally {
+          if (alive) setBootReady(true);
+        }
+      })();
+    });
+    return () => {
+      alive = false;
+      cancelAnimationFrame(id);
+    };
+  }, []);
+
 
   /** Auto-dismissing toast (2.6s) — never call raw setToast directly. */
   const pushToast = useCallback(
@@ -137,9 +178,7 @@ export function VaultApp() {
     if (!localBackupEnabled()) return;
     if (lbTimer.current) clearTimeout(lbTimer.current);
     lbTimer.current = setTimeout(() => {
-      const db = dbRef.current;
-      if (!db) return;
-      writeLocalSnapshot().catch((e) => console.warn("local backup:", e));
+      writeLocalSnapshot().catch((e: unknown) => console.warn("local backup:", e));
     }, 5000);
   }, []);
 
@@ -168,6 +207,9 @@ export function VaultApp() {
 
   const doLock = useCallback(() => {
     keyRef.current = null;
+    dekKeyRef.current = null;
+    dekRawRef.current = null;
+    setDekRawState(null);
     setExpanded(new Set());
     setRevealed(new Map());
     setDetailId(null);
@@ -307,6 +349,7 @@ export function VaultApp() {
           });
           dekKeyRef.current = await importDek(raw);
           dekRawRef.current = raw;
+          setDekRawState(raw);
           const db = await openDB();
           await enterVault(db, dekKeyRef.current);
           setFirstTime(false); // only set after vault is successfully open
@@ -353,19 +396,25 @@ export function VaultApp() {
               256,
             ),
           );
+          // Migrasi: buat envelope baru agar login selanjutnya lewat jalur envelope
+          const envMig = await createPasswordEnvelope(pw, raw);
+          await vaultKeysPut({
+            id: "dek",
+            pw_env: JSON.stringify(envMig),
+            created_at: Date.now(),
+          });
         } else {
           const next = recordFail(active);
           setLockout(next);
           return false;
         }
-        const env = await createPasswordEnvelope(pw, raw);
-        await vaultKeysPut({
-          id: "dek",
-          pw_env: JSON.stringify(env),
-          created_at: Date.now(),
-        });
+        // Jika datang dari jalur envelope, dek sudah ada — tidak perlu buat ulang.
+        // Jika dari migrasi legacy, dek baru saja dibuat di atas.
+        // Pastikan DEK ter-import dan vault terbuka (untuk jalur envelope, env sudah ada dari awal;
+        // untuk migrasi, kita baru saja menyimpannya).
         dekKeyRef.current = await importDek(raw);
         dekRawRef.current = raw;
+        setDekRawState(raw);
         const db = await openDB();
         await enterVault(db, dekKeyRef.current);
         setLockout(resetAttempts());
@@ -381,6 +430,26 @@ export function VaultApp() {
     [lockout, enterVault],
   );
 
+
+  /** Unlock via WebAuthn PRF — dipanggil dari lock screen. */
+  const handleBioUnlock = useCallback(async (): Promise<
+    { raw: Uint8Array<ArrayBuffer> } | { canceled: true } | null
+  > => {
+    const res = await unlockWithBiometrics();
+    if (!res.ok || !res.raw) return res.canceled ? { canceled: true } : null;
+    const key = await importDek(res.raw);
+    dekRawRef.current = res.raw;
+    dekKeyRef.current = key;
+    setDekRawState(res.raw);
+    const db = await openDB();
+    await enterVault(db, key);
+    setFirstTime(false);
+    setLockout(resetAttempts());
+    localStorage.removeItem("vault_ver");
+    void refreshBioWraps();
+    return { raw: res.raw };
+  }, [enterVault, refreshBioWraps]);
+
   // ===== reset =====
 
   const doReset = useCallback(async () => {
@@ -390,8 +459,11 @@ export function VaultApp() {
       dbRef.current = null;
     }
     keyRef.current = null;
+    dekKeyRef.current = null;
+    dekRawRef.current = null;
+    setDekRawState(null);
+    setBioWrapCount(0);
     resetDBCache(); // flush stale singleton so next openDB() creates a fresh connection
-    void vaultKeysGet().catch(() => {}); // noop warm; actual wipe via deleteDatabase below
     localStorage.removeItem("vault_salt");
     localStorage.removeItem("vault_ver");
     localStorage.removeItem("vault_ver_magic");
@@ -629,6 +701,7 @@ export function VaultApp() {
         });
         dekKeyRef.current = await importDek(raw);
         dekRawRef.current = raw;
+        setDekRawState(raw);
         await enterVault(db, dekKeyRef.current);
         return null;
       } catch (e) {
@@ -1112,17 +1185,29 @@ export function VaultApp() {
     ],
   );
 
+  if (!bootReady) {
+    return <div style={{ minHeight: "100dvh", background: "var(--bg)" }} />;
+  }
+
   return (
     <VaultCtx.Provider value={ctx}>
       {phase === "locked" ? (
         <LockScreen
           firstTime={firstTime}
+          bioAvailable={(bioWrapCount ?? 0) > 0}
+          onBioUnlock={handleBioUnlock}
           lockout={lockout}
           onPasswordSubmit={handlePasswordSubmit}
           onReset={() => setResetOpen(true)}
         />
       ) : (
-        <AppShell onLock={doLock} />
+        <AppShell
+          onLock={doLock}
+          dekRaw={dekRawState}
+          onBioChanged={() => {
+            void refreshBioWraps();
+          }}
+        />
       )}
 
       <EditSheet />

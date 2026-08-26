@@ -11,11 +11,15 @@ export function LockScreen({
   lockout,
   onPasswordSubmit,
   onReset,
+  bioAvailable,
+  onBioUnlock,
 }: {
   firstTime: boolean;
   lockout: LockoutState;
   onPasswordSubmit: (pw: string, isSetup: boolean) => Promise<boolean>;
   onReset: () => void;
+  bioAvailable?: boolean;
+  onBioUnlock?: () => Promise<{ raw?: Uint8Array<ArrayBuffer>; canceled?: boolean } | null>;
 }) {
   const [pw, setPw] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -27,6 +31,7 @@ export function LockScreen({
   );
   const [pwVisible, setPwVisible] = useState(false);
   const [confirmVisible, setConfirmVisible] = useState(false);
+  const [bioBusy, setBioBusy] = useState(false);
   const attempts = lockout.attempts;
   const locked = secs > 0;
 
@@ -243,6 +248,27 @@ export function LockScreen({
               : t("lock.unlockBtn")}
         </button>
 
+        {bioAvailable && !firstTime ? (
+          <button
+            type="button"
+            className="btn-bio"
+            disabled={locked || working || bioBusy}
+            onClick={() => {
+              if (!onBioUnlock || bioBusy || locked) return;
+              setBioBusy(true);
+              void onBioUnlock()
+                .then((res) => {
+                  if (!res || (!res.raw && !res.canceled)) {
+                    setMsg(t("bio.failed"));
+                    setMsgType("err");
+                  }
+                })
+                .finally(() => setBioBusy(false));
+            }}
+          >
+            {bioBusy ? "\u2026" : t("bio.btnUnlock")}
+          </button>
+        ) : null}
         <button
           type="button"
           className={"reset-link" + (firstTime ? " hidden" : "")}

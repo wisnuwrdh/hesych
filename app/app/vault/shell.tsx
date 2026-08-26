@@ -14,6 +14,12 @@ import {
 } from "../../../lib/license";
 import { getDeviceId } from "../../../lib/device";
 import {
+  disableBiometric as removeBiometric,
+  enableBiometrics,
+  listBiometrics,
+  type BioEntry,
+} from "../../../lib/biometric";
+import {
   disableLocalBackup,
   fsSupported,
   isEnabled as lbEnabled,
@@ -312,10 +318,140 @@ function OverflowMenu({
   );
 }
 
-export function AppShell({ onLock }: { onLock: () => void }) {
+// ── Modal kelola biometrik (per browser) ──────────────────────────────────
+
+// ── Modal kelola kredensial biometrik (per browser) ──────────────────────
+
+function BiometricModal({
+  dekRaw,
+  onClose,
+  onChanged,
+}: {
+  dekRaw: Uint8Array<ArrayBuffer> | null;
+  onClose: () => void;
+  onChanged: () => void;
+}) {
+  const [entries, setEntries] = useState<BioEntry[] | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [msg, setMsg] = useState<{ text: string; warn?: boolean } | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    void listBiometrics().then((list) => {
+      if (alive) setEntries(list);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  async function add() {
+    if (!dekRaw || busyId) return;
+    setBusyId("__add__");
+    const res = await enableBiometrics(dekRaw);
+    setBusyId(null);
+    if (res.ok) {
+      onChanged();
+      onClose();
+      return;
+    }
+    if (res.reason === "canceled") {
+      setMsg({ text: "Setup canceled by browser prompt", warn: true });
+      return;
+    }
+    if (res.reason === "no-prf") {
+      setMsg({
+        text: "Browser ini belum mendukung PRF extension. Coba Chrome/Edge terbaru.",
+        warn: true,
+      });
+      return;
+    }
+    setMsg({ text: "Setup failed" + (res.detail ? ` (${res.detail})` : ""), warn: true });
+  }
+
+  async function remove(id: string) {
+    if (busyId) return;
+    setBusyId(id);
+    await removeBiometric(id);
+    setBusyId(null);
+    setEntries(await listBiometrics());
+  }
+
+  return (
+    <div className="modal-overlay show" onClick={onClose}>
+      <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+        <h3 className="modal-title">Biometric Unlock</h3>
+        <p className="modal-desc">
+          Per browser & device — daftarkan ulang di tiap browser. HP harus punya screen lock.
+        </p>
+        {msg ? (
+          <p style={{ fontSize: 11, color: msg.warn ? "#c07800" : "var(--danger)", lineHeight: 1.5 }}>
+            {msg.text}
+          </p>
+        ) : null}
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
+          {(entries ?? []).map((e) => (
+            <div
+              key={e.cred_id}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 8,
+                padding: "7px 10px",
+                borderRadius: 8,
+                border: "1px solid var(--border)",
+                background: "var(--card)",
+                fontSize: 11,
+              }}
+            >
+              <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>
+                {new Date(e.created_at).toLocaleString()}
+              </span>
+              <button
+                type="button"
+                className="act-btn del"
+                style={{ flex: "0 0 auto", padding: "4px 8px" }}
+                disabled={busyId !== null}
+                onClick={() => void remove(e.cred_id)}
+              >
+                Remove
+              </button>
+            </div>
+          ))}
+        </div>
+        <div className="modal-actions">
+          <button
+            type="button"
+            className="btn-primary"
+            style={{ width: "100%", justifyContent: "center", display: "flex" }}
+            disabled={busyId !== null || !dekRaw}
+            onClick={() => void add()}
+          >
+            {busyId === "__add__" ? "…" : "+ Register this browser"}
+          </button>
+          <button className="btn-cancel" onClick={onClose}>
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function AppShell({
+  onLock,
+  dekRaw,
+  onBioChanged,
+}: {
+  onLock: () => void;
+  dekRaw: Uint8Array<ArrayBuffer> | null;
+  onBioChanged: () => void;
+}) {
   const ctx = useVault();
   const [licOpen, setLicOpen] = useState(false);
   const [lbOpen, setLbOpen] = useState(false);
+  const [bioOpen, setBioOpen] = useState(false);
   const pro = ctx.isPremium();
   const showLbReminder = reminderDue(ctx.itemCount);
   const desktopCount = ctx.counts[ctx.filter] ?? ctx.list.length;
@@ -358,6 +494,16 @@ export function AppShell({ onLock }: { onLock: () => void }) {
             {desktopCount} · {t(ctx.filter === "all" ? "filter.all" : `filter.${ctx.filter}`)}
           </div>
           <div className="bar-actions">
+            <button
+              className="icon-btn"
+              title="Biometric unlock"
+              onClick={() => setBioOpen(true)}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                <path d="M9 12v2a3 3 0 0 0 6 0v-2a3 3 0 0 0-6 0v2"/>
+              </svg>
+            </button>
             <ThemeToggle />
 
             <button className="icon-btn" id="headerLockBtn" onClick={onLock} title={t("app.lockTitle")}>
@@ -370,6 +516,16 @@ export function AppShell({ onLock }: { onLock: () => void }) {
               onOpenLicense={() => setLicOpen(true)}
             />
             {lbOpen ? <LocalBackupModal onClose={() => setLbOpen(false)} /> : null}
+            {bioOpen ? (
+              <BiometricModal
+                dekRaw={dekRaw}
+                onChanged={onBioChanged}
+                onClose={() => {
+                  setBioOpen(false);
+                  onBioChanged();
+                }}
+              />
+            ) : null}
             {licOpen ? <LicenseModal onClose={() => setLicOpen(false)} /> : null}
           </div>
         </div>
