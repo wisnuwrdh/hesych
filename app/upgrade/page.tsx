@@ -3,7 +3,7 @@ import { UpgradeClient } from "./client";
 
 export const metadata: Metadata = {
   alternates: { canonical: "https://hesych.com/upgrade" },
-  title: 'Upgrade to Pro — Hesych',
+  title: 'Upgrade to Pro - Hesych',
   description: 'Unlock unlimited items, health score, advanced generator and more with Hesych Pro.',
 };
 

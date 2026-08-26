@@ -67,7 +67,7 @@ export function resetDBCache(): void {
   _dbPromise = null;
 }
 
-/** @deprecated use resetDBCache — kept for test compatibility */
+/** @deprecated use resetDBCache - kept for test compatibility */
 export function __resetDBForTests(): void {
   _dbPromise = null;
 }

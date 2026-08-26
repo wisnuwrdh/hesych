@@ -1,4 +1,4 @@
-// Biometric orchestrator — PRF-based DEK unwrapping (clean-room, B2).
+// Biometric orchestrator - PRF-based DEK unwrapping (clean-room, B2).
 //
 // Alur:
 //   enable(dekRaw)  → register credential + assertion pertama → PRF output
@@ -162,7 +162,7 @@ export async function unlockWithBiometrics(): Promise<UnlockResult> {
 
   const entry = wraps.find((w) => w.cred_id === res.credId);
   if (!entry) {
-    // authenticator memilih kredensial yang tidak kita kenal — coba cocokkan
+    // authenticator chose a credential we don't recognize - try fallback match
     return { ok: false };
   }
 

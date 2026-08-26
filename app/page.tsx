@@ -211,7 +211,7 @@ export default function HomePage() {
                     Try Free
                   </Link>
                   <Link href="/upgrade" className="btn btn-lg btn-primary">
-                    Buy Now — $9.99
+                    Buy Now - $9.99
                   </Link>
                 </div>
                 <div className="hero-meta">
@@ -437,7 +437,7 @@ export default function HomePage() {
 
                   <div className="price-cta">
                     <Link href="/upgrade" className="btn btn-lg btn-primary btn-block">
-                      Buy Now — $9.99
+                      Buy Now - $9.99
                     </Link>
                   </div>
                   <p className="price-foot">

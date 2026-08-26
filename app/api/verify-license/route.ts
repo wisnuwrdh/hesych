@@ -1,4 +1,4 @@
-// POST /api/verify-license — license activation + device registry (max 3).
+// POST /api/verify-license - license activation + device registry (max 3).
 // 1:1 port of the legacy Vercel function (api/verify-license.js), with
 // Supabase → D1 and Upstash → in-memory limiter.
 
@@ -133,7 +133,7 @@ export async function POST(req: Request) {
 
   // ── list devices (only for an already-registered device) ──
   if (action === "list") {
-    // Pemilik key berhak melihat daftar device-nya — termasuk dari device
+    // Pemilik key berhak melihat daftar device-nya - termasuk dari device
     // ke-4 yang belum terdaftar (agar bisa remove satu lalu aktivasi).
     if (!DEVICE_ID_RE.test(deviceId)) {
       return NextResponse.json({ error: "Missing or invalid deviceId" }, { status: 400 });

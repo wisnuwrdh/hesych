@@ -1,4 +1,4 @@
-// Vault health scan — analyzes breach status, strength, age, and reuse.
+// Vault health scan - analyzes breach status, strength, age, and reuse.
 
 import { decryptWith, type VaultKey } from "./crypto";
 import { isPasswordOld } from "./format";

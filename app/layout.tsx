@@ -9,14 +9,14 @@ export const metadata: Metadata = {
   applicationName: "Hesych",
   manifest: "/manifest.webmanifest",
   openGraph: {
-    title: "Hesych — Local-First Password Manager, $9.99 Lifetime",
+    title: "Hesych: Local-First Password Manager, $9.99 Lifetime",
     description:
       "AES-256-GCM encrypted password manager. One-time payment $9.99. No subscription, no cloud, your data never leaves your device.",
     images: ["/og-image.png"],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Hesych — Local-First Password Manager, $9.99 Lifetime",
+    title: "Hesych: Local-First Password Manager, $9.99 Lifetime",
     description:
       "AES-256-GCM encrypted password manager. One-time payment $9.99. No subscription, no cloud.",
     images: ["/og-image.png"],

@@ -1,4 +1,4 @@
-// Vault item loading/migration/saving — byte-compatible with legacy app.js.
+// Vault item loading/migration/saving - byte-compatible with legacy app.js.
 
 import { ROW_META_V } from "./constants";
 import {
@@ -43,7 +43,7 @@ export async function decryptItemRow(
 ): Promise<VaultItem> {
   const title = await decryptWith(key, row.title);
   const username = await decryptWith(key, row.username);
-  const password = row.password; // kept as ciphertext — decrypted on demand
+  const password = row.password; // kept as ciphertext - decrypted on demand
   const notes = row.notes ? await decryptWith(key, row.notes) : "";
   const isV6 = row._metaV === ROW_META_V;
 
@@ -195,7 +195,7 @@ export async function buildEncryptedRow(
     ? existing.password
     : await encryptWith(key, input.password);
 
-  // Custom fields — encrypt each value.
+  // Custom fields - encrypt each value.
   const encCF: CustomField[] = [];
   for (const f of input.custom_fields) {
     if (!f.name.trim()) continue;

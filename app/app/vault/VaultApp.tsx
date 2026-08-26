@@ -165,7 +165,7 @@ export function VaultApp() {
   }, []);
 
 
-  /** Auto-dismissing toast (2.6s) — never call raw setToast directly. */
+  /** Auto-dismissing toast (2.6s) - never call raw setToast directly. */
   const pushToast = useCallback(
     (msg: string, type: "ok" | "err" | "warn" = "ok") =>
       showGlobalToast(msg, type, setToast),
@@ -219,7 +219,7 @@ export function VaultApp() {
       dbRef.current.close();
       dbRef.current = null;
     }
-    // Flush the cached openDB() promise — it resolves to the connection we
+    // Flush the cached openDB() promise - it resolves to the connection we
     // just closed; reusing it throws "The database connection is closing".
     resetDBCache();
     setPhase("locked");
@@ -408,10 +408,10 @@ export function VaultApp() {
           setLockout(next);
           return false;
         }
-        // Jika datang dari jalur envelope, dek sudah ada — tidak perlu buat ulang.
-        // Jika dari migrasi legacy, dek baru saja dibuat di atas.
-        // Pastikan DEK ter-import dan vault terbuka (untuk jalur envelope, env sudah ada dari awal;
-        // untuk migrasi, kita baru saja menyimpannya).
+        // If coming from envelope path, DEK already exists - no need to recreate.
+        // If from legacy migration, DEK was just created above.
+        // Ensure DEK is imported and vault is opened (for envelope path, env already exists;
+        // for migration, we just saved it).
         dekKeyRef.current = await importDek(raw);
         dekRawRef.current = raw;
         setDekRawState(raw);
@@ -431,7 +431,7 @@ export function VaultApp() {
   );
 
 
-  /** Unlock via WebAuthn PRF — dipanggil dari lock screen. */
+  /** Unlock via WebAuthn PRF - dipanggil dari lock screen. */
   const handleBioUnlock = useCallback(async (): Promise<
     { raw: Uint8Array<ArrayBuffer> } | { canceled: true } | null
   > => {

@@ -1,9 +1,9 @@
-// Encrypted share links — fully client-side, no backend server involved.
+// Encrypted share links - fully client-side, no backend server involved.
 //
 // Link format:  <origin>/share#s=<urlsafe-b64(JSON envelope)>
 // envelope: { v, salt, iv, ct }  where ct is AES-256-GCM of the payload JSON,
-// keyed by PBKDF2(passphrase, salt). Only the base64 envelope — never any
-// plaintext — travels in the URL fragment.
+// keyed by PBKDF2(passphrase, salt). Only the base64 envelope - never any
+// plaintext - travels in the URL fragment.
 
 import { bufToB64, b64ToBuf, decryptWith, deriveKey, encryptWith } from "./crypto";
 import { randomB64 } from "./backup";

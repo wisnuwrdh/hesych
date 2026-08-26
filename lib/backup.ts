@@ -1,4 +1,4 @@
-// Encrypted backup export/import — byte-compatible with legacy doEncExport /
+// Encrypted backup export/import - byte-compatible with legacy doEncExport /
 // processImportJson. Master mode stores raw rows (already encrypted with the
 // vault master key). Custom mode wraps rows re-encrypted with a user password
 // in an extra AES-GCM layer.

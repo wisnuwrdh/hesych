@@ -2,7 +2,7 @@
 // format as master-mode export) into a folder chosen by the user via the
 // File System Access API. Transport to other devices is then handled by
 // whatever the user already uses (Syncthing, iCloud Drive, Dropbox
-// desktop, USB) — Hesych itself stays 100% serverless.
+// desktop, USB) - Hesych itself stays 100% serverless.
 //
 // Chromium-only (showDirectoryPicker). Firefox/Safari gracefully hidden.
 

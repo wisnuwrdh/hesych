@@ -1,6 +1,6 @@
 import { LegalPage } from "../legal-page";
 
-// Ported verbatim from the legacy static site (terms.html) — original scoped
+// Ported verbatim from the legacy static site (terms.html) - original scoped
 // styles + markup preserved for pixel-faithful migration.
 const CSS = String.raw`*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -146,7 +146,7 @@ const BODY = String.raw`<nav class="nav">
 
   <!-- TL;DR -->
   <div class="tl-dr">
-    <div class="tl-dr-title">TL;DR — The short version</div>
+    <div class="tl-dr-title">TL;DR - The short version</div>
     <ul>
       <li>You pay once, you own the license forever. No recurring charges.</li>
       <li>30-day money-back guarantee, no questions asked.</li>
@@ -247,7 +247,7 @@ const BODY = String.raw`<nav class="nav">
 
 export const metadata = {
   alternates: { canonical: "https://hesych.com/terms" },
-  title: 'Terms of Service — Hesych',
+  title: 'Terms of Service - Hesych',
   description: 'Terms of service for the Hesych local-first password manager.',
 };
 

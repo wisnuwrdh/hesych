@@ -251,7 +251,12 @@ export function LockScreen({
         {bioAvailable && !firstTime ? (
           <button
             type="button"
-            className="btn-bio"
+            className="btn-primary"
+            style={{
+              background: "var(--accent-dim)",
+              color: "var(--accent)",
+              border: "1px solid var(--accent)",
+            }}
             disabled={locked || working || bioBusy}
             onClick={() => {
               if (!onBioUnlock || bioBusy || locked) return;

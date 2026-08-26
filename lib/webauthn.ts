@@ -1,9 +1,9 @@
-// WebAuthn platform layer — clean-room design (replaces deleted lib/bio.ts).
+// WebAuthn platform layer - clean-room design (replaces deleted lib/bio.ts).
 //
 // Hesych uses the WebAuthn PRF extension (HMAC-Secret) to derive a stable
 // secret per credential. That secret becomes the KEK that unwraps the
 // biometric-wrapped DEK. Requirements:
-//   - Platform authenticator (Touch/Face/PIN) — userVerification: required
+//   - Platform authenticator (Touch/Face/PIN) - userVerification: required
 //   - Browser support for the prf extension (Chromium 118+, Safari 17+)
 //
 // Credentials are bound per browser + per domain (WebAuthn spec). Each

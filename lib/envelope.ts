@@ -1,4 +1,4 @@
-// Envelope encryption core — DEK (Data Encryption Key) model.
+// Envelope encryption core - DEK (Data Encryption Key) model.
 //
 //   DEK (32B acak)  → mengenkripsi seluruh item vault
 //   PW_WRAP         = AES-GCM( PBKDF2-SHA256(pw, salt, 600k) , DEK )

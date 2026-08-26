@@ -361,7 +361,7 @@ function BiometricModal({
     }
     if (res.reason === "no-prf") {
       setMsg({
-        text: "Browser ini belum mendukung PRF extension. Coba Chrome/Edge terbaru.",
+        text: "This browser does not support the PRF extension. Try the latest Chrome or Edge.",
         warn: true,
       });
       return;
@@ -382,7 +382,7 @@ function BiometricModal({
       <div className="modal-box" onClick={(e) => e.stopPropagation()}>
         <h3 className="modal-title">Biometric Unlock</h3>
         <p className="modal-desc">
-          Per browser & device — daftarkan ulang di tiap browser. HP harus punya screen lock.
+          Per browser and device. Register separately in each browser. Your phone must have a screen lock.
         </p>
         {msg ? (
           <p style={{ fontSize: 11, color: msg.warn ? "#c07800" : "var(--danger)", lineHeight: 1.5 }}>

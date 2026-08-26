@@ -1,8 +1,8 @@
 "use client";
 
-// Upgrade funnel page — pure marketing shell (pricing/features/buy/compare)
+// Upgrade funnel page - pure marketing shell (pricing/features/buy/compare)
 // using verbatim legacy markup. License activation happens ONLY inside the
-// vault (menu ⋮ → Enter License Key) — see VaultApp + lib/license.
+// vault (menu ⋮ → Enter License Key) - see VaultApp + lib/license.
 
 import { useEffect, useState } from "react";
 import { t } from "../../lib/i18n";
@@ -28,7 +28,7 @@ export function UpgradeClient({
   const [status, setStatus] = useState<"buy" | "active">("buy");
   const [meta, setMeta] = useState<ReturnType<typeof getLicenseMeta>>(null);
 
-  // localStorage hanya tersedia di client — flip setelah mount agar SSR aman
+  // localStorage hanya tersedia di client - flip setelah mount agar SSR aman
   useEffect(() => {
     // defer agar tidak memicu cascading render sinkron (react-hooks lint)
     const id = requestAnimationFrame(() => {
@@ -78,7 +78,7 @@ export function UpgradeClient({
         </div>
       ) : (
         <div className="wrap">
-          {/* Pricing card + trust badges — verbatim legacy markup */}
+          {/* Pricing card + trust badges - verbatim legacy markup */}
           <div dangerouslySetInnerHTML={{ __html: buyHtml.replace('id="buySection"', 'data-buy') }} />
 
           <p style={{ fontSize: 11, color: "var(--dim)", textAlign: "center", margin: "-6px 0 16px" }}>

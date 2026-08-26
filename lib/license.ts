@@ -1,4 +1,4 @@
-// Hesych Premium licensing — Gumroad-verified with device registry (max 3).
+// Hesych Premium licensing - Gumroad-verified with device registry (max 3).
 //
 // Flow: activate(key) → POST /api/verify-license {license, deviceId,
 // deviceName} → route handler verifies against api.gumroad.com (refunds /
@@ -6,7 +6,7 @@
 // device in D1. On success we persist locally; a silent re-verification runs
 // whenever the last check is older than 30 days and the app is online.
 //
-// No secret lives in the client bundle — validation truth stays on Gumroad.
+// No secret lives in the client bundle - validation truth stays on Gumroad.
 
 import { STORAGE_KEYS } from "./constants";
 import { getDeviceId, getDeviceName } from "./device";
@@ -61,7 +61,7 @@ export function getMeta(): LicenseMeta | null {
   }
 }
 
-/** Silent 30-day revalidation — never blocks, only downgrades on hard invalid. */
+/** Silent 30-day revalidation - never blocks, only downgrades on hard invalid. */
 export async function revalidateIfNeeded(): Promise<void> {
   const meta = getMeta();
   if (!meta) return;

@@ -1,4 +1,4 @@
-// Minimal Cloudflare D1 REST client — server-side only.
+// Minimal Cloudflare D1 REST client - server-side only.
 //
 // Uses the D1 HTTP API instead of runtime bindings so the license endpoints
 // work identically whether the worker runs on Pages, Workers, or dev.

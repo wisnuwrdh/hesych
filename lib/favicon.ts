@@ -1,4 +1,4 @@
-// Favicon resolver — ported verbatim from legacy app.js (DOMAIN_MAP + guessDomain).
+// Favicon resolver - ported verbatim from legacy app.js (DOMAIN_MAP + guessDomain).
 // Images are served LOCALLY from /favicons/{domain}.png (offline, zero-knowledge).
 // Populate the folder once via: node scripts/fetch-favicons.mjs
 // Missing files gracefully fall back to the item's initial letter.

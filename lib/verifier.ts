@@ -66,7 +66,7 @@ export async function checkVerifier(
     if (await checkVerifierBytes(key, getVerifierMagic(), verifierB64)) {
       return true;
     }
-    // Legacy vaults used the constant magic "VAULT_OK" — accept and migrate.
+    // Legacy vaults used the constant magic "VAULT_OK" - accept and migrate.
     if (await checkVerifierBytes(key, "VAULT_OK", verifierB64)) {
       writeVerifierForKey(key).catch(() => {});
       return true;

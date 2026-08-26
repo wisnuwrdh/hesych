@@ -1,6 +1,6 @@
 import { LegalPage } from "../legal-page";
 
-// Ported verbatim from the legacy static site (privacy.html) — original scoped
+// Ported verbatim from the legacy static site (privacy.html) - original scoped
 // styles + markup preserved for pixel-faithful migration.
 const CSS = String.raw`*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -149,7 +149,7 @@ const BODY = String.raw`<nav class="nav">
 
   <!-- TL;DR -->
   <div class="tl-dr">
-    <div class="tl-dr-title">TL;DR — The short version</div>
+    <div class="tl-dr-title">TL;DR - The short version</div>
     <ul>
       <li>Your vault is encrypted on your device. We never see your passwords.</li>
       <li>We don't collect, store, or sell your personal data.</li>
@@ -248,7 +248,7 @@ const BODY = String.raw`<nav class="nav">
 
 export const metadata = {
   alternates: { canonical: "https://hesych.com/privacy" },
-  title: 'Privacy Policy — Hesych',
+  title: 'Privacy Policy - Hesych',
   description: 'How Hesych handles your data: local-first encryption, no tracking, no data collection.',
 };
 
