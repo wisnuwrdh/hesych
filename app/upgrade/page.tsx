@@ -47,7 +47,8 @@ body::before{
 
 /* ── BACK LINK ── */
 .back{
-  display:inline-flex;align-items:center;gap:6px;
+  display:flex;width:100%;align-items:center;justify-content:flex-start;
+  gap:6px;
   font-size:13px;color:var(--sub);text-decoration:none;
   margin-bottom:28px;transition:color .15s;
 }
