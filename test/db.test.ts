@@ -52,12 +52,13 @@ describe("vaultdb items", () => {
   });
   afterEach(() => db.close());
 
-  it("creates the legacy-compatible stores + local-backup handle store", () => {
+  it("creates the legacy-compatible stores + handle & vault-keys stores", () => {
     expect(Array.from(db.objectStoreNames).sort()).toEqual([
       "handles",
       "items",
       "pw_history",
       "share_log",
+      "vault_keys",
     ]);
   });
 
