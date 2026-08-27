@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { t } from "../../../lib/i18n";
 import { STORAGE_KEYS } from "../../../lib/constants";
 import {
@@ -21,6 +21,7 @@ import {
 } from "../../../lib/biometric";
 import {
   disableLocalBackup,
+  dismissReminder,
   fsSupported,
   isEnabled as lbEnabled,
   lastBackupAt,
@@ -452,8 +453,12 @@ export function AppShell({
   const [licOpen, setLicOpen] = useState(false);
   const [lbOpen, setLbOpen] = useState(false);
   const [bioOpen, setBioOpen] = useState(false);
+  const [dismissTick, setDismissTick] = useState(0);
   const pro = ctx.isPremium();
-  const showLbReminder = reminderDue(ctx.itemCount);
+  const showLbReminder = useMemo(() => {
+    void dismissTick;
+    return reminderDue(ctx.itemCount);
+  }, [ctx.itemCount, dismissTick]);
   const desktopCount = ctx.counts[ctx.filter] ?? ctx.list.length;
 
   const chipLabel = (key: VaultFilter) =>
@@ -478,7 +483,14 @@ export function AppShell({
             <button className="act-btn" style={{ flex:"0 0 auto", padding:"4px 10px" }} onClick={() => setLbOpen(true)}>
               {t("lb.enableAction")}
             </button>
-            <button className="icon-btn" aria-label="dismiss" onClick={() => sessionStorage.setItem("lb_reminder_dismissed","1")}>
+            <button
+              className="icon-btn"
+              aria-label="dismiss"
+              onClick={() => {
+                dismissReminder();
+                setDismissTick((n) => n + 1);
+              }}
+            >
               <XIcon width={12} height={12} />
             </button>
           </div>
@@ -828,37 +840,53 @@ function LoadDevicesOnMount({ onReady }: { onReady: () => void }) {
 
 function LocalBackupModal({ onClose }: { onClose: () => void }) {
   const supported = fsSupported();
-  const enabled = lbEnabled();
+  const [enabled, setEnabled] = useState(lbEnabled());
   const [last, setLast] = useState(lastBackupAt());
   const [savedFlash, setSavedFlash] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [modalErr, setModalErr] = useState<string | null>(null);
 
-  const refresh = () => setLast(lastBackupAt());
+  const refresh = () => {
+    setLast(lastBackupAt());
+    setEnabled(lbEnabled());
+  };
 
   const pickAndEnable = async () => {
     setBusy(true);
+    setModalErr(null);
     const res = await pickBackupFolder();
     if (res.ok) {
       try {
         await writeSnapshot();
+        refresh();
+        setSavedFlash(true);
+        setTimeout(() => setSavedFlash(false), 2500);
       } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        if (msg === "missing_handle") setModalErr("Backup folder not found, please re-select");
+        else if (msg === "permission") setModalErr("Backup folder permission needed");
+        else setModalErr("Backup failed: " + msg);
         console.warn("local backup:", e);
       }
-      refresh();
-      setSavedFlash(true);
-      setTimeout(() => setSavedFlash(false), 2500);
+    } else if (res.error && res.error !== "canceled" && res.error !== "unsupported") {
+      setModalErr(res.error);
     }
     setBusy(false);
   };
 
   const backupNow = async () => {
     setBusy(true);
+    setModalErr(null);
     try {
       await writeSnapshot();
       refresh();
       setSavedFlash(true);
       setTimeout(() => setSavedFlash(false), 2500);
     } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg === "missing_handle") setModalErr("Backup folder not found, please re-select");
+      else if (msg === "permission") setModalErr("Backup folder permission needed");
+      else setModalErr("Backup failed: " + msg);
       console.warn("local backup:", e);
     }
     setBusy(false);
@@ -886,6 +914,11 @@ function LocalBackupModal({ onClose }: { onClose: () => void }) {
             {savedFlash ? (
               <div style={{ fontSize: 12, color: "var(--green)", marginBottom: 8 }}>
                 {t("lb.saved")}
+              </div>
+            ) : null}
+            {modalErr ? (
+              <div style={{ fontSize: 12, color: "var(--danger)", marginBottom: 8 }}>
+                {modalErr}
               </div>
             ) : null}
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>

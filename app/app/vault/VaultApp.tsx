@@ -178,8 +178,24 @@ export function VaultApp() {
     if (!localBackupEnabled()) return;
     if (lbTimer.current) clearTimeout(lbTimer.current);
     lbTimer.current = setTimeout(() => {
-      writeLocalSnapshot().catch((e: unknown) => console.warn("local backup:", e));
+      writeLocalSnapshot().catch((e: unknown) => {
+        const msg = e instanceof Error ? e.message : String(e);
+        if (msg === "missing_handle") {
+          pushToast("Auto-backup folder not found, please re-select", "warn");
+        } else if (msg === "permission") {
+          pushToast("Backup folder permission needed", "warn");
+        } else {
+          pushToast("Auto-backup failed: " + msg, "err");
+        }
+        console.warn("local backup:", e);
+      });
     }, 5000);
+  }, [pushToast]);
+
+  useEffect(() => {
+    return () => {
+      if (lbTimer.current) clearTimeout(lbTimer.current);
+    };
   }, []);
 
   const copyText = useCallback(
@@ -206,6 +222,10 @@ export function VaultApp() {
   );
 
   const doLock = useCallback(() => {
+    if (lbTimer.current) {
+      clearTimeout(lbTimer.current);
+      lbTimer.current = null;
+    }
     keyRef.current = null;
     dekKeyRef.current = null;
     dekRawRef.current = null;
@@ -703,13 +723,14 @@ export function VaultApp() {
         dekRawRef.current = raw;
         setDekRawState(raw);
         await enterVault(db, dekKeyRef.current);
+        queueLocalBackup();
         return null;
       } catch (e) {
         console.warn("change master password", e);
         return "cp.failed";
       }
     },
-    [enterVault],
+    [enterVault, queueLocalBackup],
   );
 
   const decryptRaw = useCallback(
@@ -774,12 +795,13 @@ export function VaultApp() {
         const bundle = JSON.parse(text);
         await importBackupJson(db, bundle, key, mode, pw);
         await enterVault(db, key);
+        queueLocalBackup();
         return null;
       } catch (e) {
         return e instanceof Error ? e.message : String(e);
       }
     },
-    [enterVault],
+    [enterVault, queueLocalBackup],
   );
 
   const updateItemMeta = useCallback(
@@ -807,6 +829,7 @@ export function VaultApp() {
           count > 0 ? t("breach.breachedSingle", { n: count }) : t("breach.safeSingle"),
           count > 0 ? "err" : "ok",
         );
+        queueLocalBackup();
       } catch (e) {
         pushToast(
           t("breach.apiErr", { msg: e instanceof Error ? e.message : String(e) }),
@@ -820,7 +843,7 @@ export function VaultApp() {
         });
       }
     },
-    [items, updateItemMeta, pushToast],
+    [items, updateItemMeta, pushToast, queueLocalBackup],
   );
 
   const checkAllBreaches = useCallback(
@@ -843,11 +866,12 @@ export function VaultApp() {
         } else {
           pushToast(t("breach.doneAll"));
         }
+        queueLocalBackup();
       } finally {
         setBreachRunning(false);
       }
     },
-    [items, updateItemMeta, pushToast],
+    [items, updateItemMeta, pushToast, queueLocalBackup],
   );
 
   const checkHealth = useCallback(
@@ -1010,8 +1034,9 @@ export function VaultApp() {
       });
       setItems((prev) => prev.map((i) => (i.id === id ? { ...i, favorite } : i)));
       pushToast(favorite ? t("toast.favAdded") : t("toast.favRemoved"), "ok");
+      queueLocalBackup();
     },
-    [items, withKey, pushToast],
+    [items, withKey, pushToast, queueLocalBackup],
   );
 
   const confirmDelete = useCallback(async () => {

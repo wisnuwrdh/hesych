@@ -45,11 +45,20 @@ export function lastBackupAt(): number {
   return Number(localStorage.getItem(STORAGE_KEYS.lastLocalBackup) || 0);
 }
 
-/** True when items exist and (never backed up OR older than 14 days). */
+/** True when items exist and (never backed up OR older than 14 days). Respects per-session dismiss. */
 export function reminderDue(itemCount: number): boolean {
   if (itemCount === 0 || !fsSupported()) return false;
+  try {
+    if (sessionStorage.getItem("lb_reminder_dismissed") === "1") return false;
+  } catch {}
   const last = lastBackupAt();
   return Date.now() - last > REMINDER_MS;
+}
+
+export function dismissReminder(): void {
+  try {
+    sessionStorage.setItem("lb_reminder_dismissed", "1");
+  } catch {}
 }
 
 async function putHandle(handle: DirHandle): Promise<void> {
@@ -104,28 +113,56 @@ export async function disableLocalBackup(): Promise<void> {
   setEnabled(false);
 }
 
+let writeQueue: Promise<void> = Promise.resolve();
+
 /**
  * Writes the encrypted snapshot now. Throws on permission/IO failure so the
  * caller can surface a toast; silently no-ops when disabled.
  */
 export async function writeSnapshot(): Promise<void> {
   if (!isEnabled()) return;
-  const db = await openDB();
-  const handle = await getHandle();
-  if (!handle) return;
-  if (!(await ensureWritePermission(handle, false))) {
-    throw new Error("permission");
-  }
-  const bundle = await exportMasterBackup(db);
-  const fh = await (
-    handle as {
+  // Queue writes to avoid concurrent createWritable collisions
+  const task = writeQueue.then(async () => {
+    const db = await openDB();
+    const handle = await getHandle();
+    if (!handle) throw new Error("missing_handle");
+    if (!(await ensureWritePermission(handle, false))) {
+      throw new Error("permission");
+    }
+    const bundle = await exportMasterBackup(db);
+    const content = JSON.stringify(bundle, null, 2);
+    // Atomic: write to tmp then overwrite final
+    const dir = handle as {
       getFileHandle: (n: string, o: { create: boolean }) => Promise<{
         createWritable: () => Promise<{ write: (d: string) => Promise<void>; close: () => Promise<void> }>;
       }>;
+    };
+    const tmpName = SNAPSHOT_FILENAME + ".tmp";
+    const tmpHandle = await dir.getFileHandle(tmpName, { create: true });
+    const tmpWritable = await tmpHandle.createWritable();
+    try {
+      await tmpWritable.write(content);
+      await tmpWritable.close();
+    } catch (e) {
+      try { await tmpWritable.close(); } catch {}
+      throw e;
     }
-  ).getFileHandle(SNAPSHOT_FILENAME, { create: true });
-  const writable = await fh.createWritable();
-  await writable.write(JSON.stringify(bundle, null, 2));
-  await writable.close();
-  localStorage.setItem(STORAGE_KEYS.lastLocalBackup, String(Date.now()));
+    const fh = await dir.getFileHandle(SNAPSHOT_FILENAME, { create: true });
+    const writable = await fh.createWritable();
+    try {
+      await writable.write(content);
+      await writable.close();
+    } catch (e) {
+      try { await writable.close(); } catch {}
+      throw e;
+    }
+    // Best-effort cleanup tmp
+    try {
+      await (dir as unknown as { removeEntry: (n: string) => Promise<void> }).removeEntry(tmpName);
+    } catch {}
+    localStorage.setItem(STORAGE_KEYS.lastLocalBackup, String(Date.now()));
+    try { sessionStorage.removeItem("lb_reminder_dismissed"); } catch {}
+  });
+  writeQueue = task.catch(() => {});
+  return task;
 }
