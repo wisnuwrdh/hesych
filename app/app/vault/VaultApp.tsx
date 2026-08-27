@@ -748,8 +748,10 @@ export function VaultApp() {
         const a = document.createElement("a");
         a.href = url;
         a.download = `hesych_backup_${Date.now()}.vault`;
+        document.body.appendChild(a);
         a.click();
-        URL.revokeObjectURL(url);
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
         return null;
       } catch (e) {
         return e instanceof Error ? e.message : String(e);

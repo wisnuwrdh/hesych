@@ -22,6 +22,7 @@ export interface BackupBundle {
   salt?: string;
   iv?: string;
   data: unknown;
+  dekEnv?: string; // v4: JSON-stringified PwEnvelope for master portability
 }
 
 export function randomB64(bytes = 16): string {
@@ -32,11 +33,22 @@ export async function exportMasterBackup(
   db: IDBDatabase,
 ): Promise<BackupBundle> {
   const rows = await dbGetAll(db);
+  // Include DEK envelope for true portability (v4). If envelope missing (very old vault),
+  // dekEnv stays undefined and import falls back to legacy salt check.
+  let dekEnv: string | undefined;
+  try {
+    const { vaultKeysGet } = await import("./db");
+    const rec = await vaultKeysGet();
+    dekEnv = rec?.pw_env;
+  } catch {
+    // best-effort: master backup without DEK is device-local only
+  }
   return {
     type: "vault-encrypted-backup",
     pwMode: "master",
-    v: 3,
+    v: 4,
     salt: bufToB64(getSalt()),
+    dekEnv,
     data: rows as unknown,
   };
 }
@@ -112,7 +124,19 @@ async function resolveRows(
   }
 
   const rows = Array.isArray(bundle.data) ? (bundle.data as EncryptedVaultRow[]) : [];
-  if (bundle.v >= 3 && bundle.salt && bundle.salt !== vaultSalt) {
+  // v4 includes dekEnv for portability check; v3 relies on legacy salt check
+  if (bundle.dekEnv) {
+    // Trial decrypt to verify DEK compatibility; if mismatch, fail fast with actionable error
+    if (rows.length) {
+      try {
+        await decryptWith(vaultKey, rows[0].title);
+      } catch {
+        throw new Error(
+          "Backup was created with a different vault encryption key. Use a custom-password backup for cross-device restore, or restore on the original device.",
+        );
+      }
+    }
+  } else if (bundle.v >= 3 && bundle.salt && bundle.salt !== vaultSalt) {
     throw new Error("Backup was created with a different master password");
   }
   return rows;
@@ -127,8 +151,16 @@ export async function importBackup(
 ): Promise<ImportResult> {
   const rows = await resolveRows(bundle, vaultKey, bufToB64(getSalt()), password);
   if (mode === "replace") {
-    await dbClearItems(db);
-    for (const row of rows) await dbPutItem(db, row);
+    // Atomic: clear + bulk put in single transaction for rollback safety
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction("items", "readwrite");
+      const store = tx.objectStore("items");
+      store.clear();
+      for (const row of rows) store.put(row);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error ?? new Error("import transaction failed"));
+      tx.onabort = () => reject(tx.error ?? new Error("import transaction aborted"));
+    });
     return { count: rows.length };
   }
   const existingIds = new Set((await dbGetAll(db)).map((r) => r.id));

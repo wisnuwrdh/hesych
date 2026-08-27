@@ -60,7 +60,7 @@ export function ExportSheet() {
     }
     setPw("");
     setConfirm("");
-    setMsg({ text: "Backup downloaded", err: true });
+    setMsg({ text: "Backup downloaded", err: false });
     ctx.setBackupOpen(false);
   };
 
@@ -142,7 +142,7 @@ export function ExportSheet() {
 
         <div style={{ fontSize: 11, color: "var(--dim)", marginTop: 4, marginBottom: 10, lineHeight: 1.5 }}>
           {mode === "master"
-            ? "Encrypted with your vault master password. Restores on this vault (same master password + salt)."
+            ? "Encrypted for this vault only. For cross-device backup, use custom password."
             : "Extra password-protected layer. Restores on any device/vault with the custom password."}
         </div>
         <div id="cpMsg" style={{ fontSize: 11, color: msg?.err ? "var(--danger)" : "var(--sub)", minHeight: 16, marginBottom: 10 }}>
