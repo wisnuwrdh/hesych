@@ -226,19 +226,14 @@ function OverflowMenu({
       </button>
       {open ? (
         <div className="overflow-dropdown">
-          <button className="overflow-item" onClick={() => { setOpen(false); onOpenBackup(); }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-            </svg>
-            <span>{t("lb.menuItem")}</span>
-          </button>
-                    <button className="overflow-item" onClick={() => { setOpen(false); ctx.setCpOpen(true); }}>
+          <button className="overflow-item" onClick={() => { setOpen(false); ctx.setCpOpen(true); }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="8" r="4" />
               <path d="M6 20v-1a6 6 0 0 1 12 0v1" />
             </svg>
             <span>{t("app.changePwTitle")}</span>
           </button>
+          <div className="overflow-sep" />
           <button className="overflow-item" onClick={() => { setOpen(false); ctx.setBackupOpen(true); }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -255,6 +250,13 @@ function OverflowMenu({
             </svg>
             <span>{t("import.title")}</span>
           </button>
+          <button className="overflow-item" onClick={() => { setOpen(false); onOpenBackup(); }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+            </svg>
+            <span>{t("lb.menuItem")}</span>
+          </button>
+          <div className="overflow-sep" />
           <button
             className="overflow-item"
             disabled={ctx.breachRunning}
@@ -273,16 +275,7 @@ function OverflowMenu({
             </svg>
             <span>{t("health.title")}</span>
           </button>
-          <button className="overflow-item" onClick={() => { setOpen(false); void ctx.loadShareLog(); ctx.setShareLogOpen(true); }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="18" cy="5" r="3" />
-              <circle cx="6" cy="12" r="3" />
-              <circle cx="18" cy="19" r="3" />
-              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
-              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
-            </svg>
-            <span>{t("share.logTitle")}</span>
-          </button>
+          <div className="overflow-sep" />
           {!pro ? (
             <>
               <a className="overflow-item" href="/upgrade" style={{ display: "flex" }}>
@@ -308,9 +301,16 @@ function OverflowMenu({
               <span>{t("premium.manageItem")}</span>
             </button>
           )}
-          <button className="overflow-item" onClick={onLock}>
-            <LockIcon width={14} height={14} />
-            <span>{t("app.lockTitle")}</span>
+          <div className="overflow-sep" />
+          <button className="overflow-item" onClick={() => { setOpen(false); void ctx.loadShareLog(); ctx.setShareLogOpen(true); }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="18" cy="5" r="3" />
+              <circle cx="6" cy="12" r="3" />
+              <circle cx="18" cy="19" r="3" />
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+            </svg>
+            <span>{t("share.logTitle")}</span>
           </button>
         </div>
       ) : null}

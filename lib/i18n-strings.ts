@@ -227,7 +227,7 @@ export const STRINGS = {
   "premium.manageItem": "Manage License",
   "premium.devicesTitle": "Devices",
   "premium.devicesHint": "Up to 3 devices per license.",
-  "lb.menuItem": "Local Auto-Backup",
+  "lb.menuItem": "Auto-Backup Folder",
   "lb.title": "Local Auto-Backup",
   "lb.desc": "An encrypted snapshot is written to a folder you choose. Point any sync tool at that folder and your backups travel - Hesych itself stays serverless.",
   "lb.pickFolder": "Choose folder & enable",
