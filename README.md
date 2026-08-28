@@ -144,7 +144,9 @@ device's registry slot.
 ## Contributing
 
 Found a bug or a security issue? Email [hi@hesych.com](mailto:hi@hesych.com) or
-open an issue — security reports get priority response.
+open an issue — security reports get priority response. See
+[SECURITY.md](SECURITY.md) for our security policy, supported versions, and
+what to include in a report.
 
 Please do not open pull requests: this repository is published for
 transparency, not community development.
