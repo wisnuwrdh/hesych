@@ -554,7 +554,7 @@ export default function HomePage() {
               <div className="foot-col-title">Company</div>
               <ul className="foot-links">
                 <li>
-                  <a href="mailto:hi@hesych.com">Contact</a>
+                  <Link href="/contact">Contact</Link>
                 </li>
                 <li>
                   <Link href="/privacy">Privacy Policy</Link>

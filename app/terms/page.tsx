@@ -141,7 +141,7 @@ const BODY = String.raw`<nav class="nav">
   <div class="doc-header">
     <span class="doc-kicker">Legal</span>
     <h1 class="doc-title">Terms of Service</h1>
-    <div class="doc-meta">Last updated: April 27, 2026 · Effective immediately</div>
+    <div class="doc-meta">Last updated: August 28, 2026 · Effective immediately</div>
   </div>
 
   <!-- TL;DR -->
@@ -164,7 +164,7 @@ const BODY = String.raw`<nav class="nav">
   <section>
     <h2><span class="sec-num">2.</span> Description of Service</h2>
     <p>Hesych is a local-first password manager that encrypts and stores your credentials on your device using AES-256-GCM encryption. The Service is available as a Progressive Web App (PWA) accessible at <a href="https://hesych.com">hesych.com</a>.</p>
-    <p>The Free tier is provided at no cost and includes core password management features. The Premium tier requires a one-time payment and unlocks additional features as described on our pricing page.</p>
+    <p>The Free tier is provided at no cost and includes core password management features. The Premium tier requires a one-time payment and unlocks additional features as described on <a href="/upgrade">our pricing page</a>.</p>
   </section>
 
   <section>

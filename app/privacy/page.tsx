@@ -204,7 +204,7 @@ const BODY = String.raw`<nav class="nav">
     <ul class="doc-list">
       <li><strong style="color:var(--text)">Gumroad.</strong> Payment processing. Subject to <a href="https://gumroad.com/privacy" target="_blank" rel="noopener">Gumroad's Privacy Policy</a>.</li>
       <li><strong style="color:var(--text)">Resend.</strong> Transactional email (license key delivery only). Subject to <a href="https://resend.com/legal/privacy-policy" target="_blank" rel="noopener">Resend's Privacy Policy</a>.</li>
-      <li><strong style="color:var(--text)">Vercel.</strong> Hosting. May log standard HTTP request metadata (IP, user agent) for security purposes. Subject to <a href="https://vercel.com/legal/privacy-policy" target="_blank" rel="noopener">Vercel's Privacy Policy</a>.</li>
+      <li><strong style="color:var(--text)">Cloudflare.</strong> Hosting (Cloudflare Pages). May log standard HTTP request metadata (IP, user agent) for security purposes. Subject to <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">Cloudflare's Privacy Policy</a>.</li>
       <li><strong style="color:var(--text)">Have I Been Pwned (HIBP).</strong> Breach checking. We send only a 5-character hash prefix of your password, never the full password. See <a href="https://haveibeenpwned.com/Privacy" target="_blank" rel="noopener">HIBP's Privacy Policy</a>.</li>
     </ul>
   </section>
