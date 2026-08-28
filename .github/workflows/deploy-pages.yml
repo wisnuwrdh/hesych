@@ -23,6 +23,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Lint
+        run: npm run lint
+
+      - name: Dependency audit (fails on high/critical)
+        run: npm audit --audit-level=high
+
       - name: Typecheck
         run: npm run typecheck
 

@@ -3,8 +3,8 @@ import { UpgradeClient } from "./client";
 
 export const metadata: Metadata = {
   alternates: { canonical: "https://hesych.com/upgrade" },
-  title: 'Upgrade to Pro - Hesych',
-  description: 'Unlock unlimited items, health score, advanced generator and more with Hesych Pro.',
+  title: 'Upgrade to Premium - Hesych',
+  description: 'Unlock Vault Health Score, encrypted share links, bulk generator and more with Hesych Premium — one-time payment, lifetime access.',
 };
 
 const CSS = String.raw`*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -209,7 +209,7 @@ body::before{
 .btn-open:hover{border-color:var(--border-focus)}`;
 
 const HEAD_HTML = String.raw`<div class="wrap">
-  <h1 class="doc-title" style="font-size:22px;margin-bottom:4px;text-align:center">Upgrade to Pro</h1>
+  <h1 class="doc-title" style="font-size:22px;margin-bottom:4px;text-align:center">Upgrade to Premium</h1>
 
   <a href="/" class="back">
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">

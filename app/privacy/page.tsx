@@ -192,7 +192,7 @@ const BODY = String.raw`<nav class="nav">
     <h2><span class="sec-num">4.</span> Cookies & Tracking</h2>
     <p>We do not use cookies for tracking or advertising. The only storage we use is:</p>
     <ul class="doc-list">
-      <li><strong style="color:var(--text)">localStorage.</strong> Stores your app preferences (theme, language) and license verification status. This data stays in your browser.</li>
+      <li><strong style="color:var(--text)">localStorage.</strong> Stores your app preferences (theme) and license verification status. This data stays in your browser.</li>
       <li><strong style="color:var(--text)">IndexedDB.</strong> Stores your encrypted vault. This data never leaves your device.</li>
     </ul>
     <p>We do not use Google Analytics, Facebook Pixel, Hotjar, or any third-party analytics or tracking tools.</p>
