@@ -17,12 +17,12 @@
 - 🔑 Password generator + passphrase mode
 - ⏱️ Built-in TOTP 2FA codes with countdown
 - 🚨 Breach checking via Have I Been Pwned (**k-anonymity** — your password never leaves the device unhashed)
+- 📤 Encrypted backup export/import (master-password or custom-passphrase mode)
 - 🌗 Dark / light theme, installable PWA
 - 🔍 Secret Lock — temporarily hide sensitive secrets ("digital detox" timer)
 
 ### Premium ($9.99 lifetime)
 - ❤️ Vault Health Score — weak/reused/old/breached audit with fix flow
-- 📤 Encrypted backup export/import (master-password or custom-passphrase mode)
 - 🔗 Encrypted share links — securely share one credential via passphrase-protected URL
 - 🏷️ Tags & advanced filters
 - ⚡ Bulk password generator
@@ -121,7 +121,6 @@ or disabled. Resetting a vault also frees that device's registry slot.
 - [x] Biometric unlock feature **removed entirely** (see [#1](https://github.com/wisnuwrdh/hesych/issues/1))
 - [ ] Multi-device cloud sync (encrypted snapshot merge; D1 `vault_sync` foundation planned)
 - [ ] Content cluster: feature deep-dives & comparisons
-- ⚠️ Encrypted Export is marketed as Premium but not yet gated in the app UI
 
 ---
 

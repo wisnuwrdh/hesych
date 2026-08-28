@@ -191,7 +191,7 @@ const BODY = String.raw`<nav class="nav">
     <p>You are solely responsible for:</p>
     <ul class="doc-list">
       <li><strong style="color:var(--text)">Your master password.</strong> If you lose it, your vault cannot be recovered by you or by us. There is no reset mechanism by design.</li>
-      <li><strong style="color:var(--text)">Keeping backups.</strong> We strongly recommend using the Encrypted Export feature (Premium) to maintain regular backups of your vault.</li>
+      <li><strong style="color:var(--text)">Keeping backups.</strong> We strongly recommend using the Encrypted Export feature to maintain regular backups of your vault.</li>
       <li><strong style="color:var(--text)">Device security.</strong> Your encrypted vault is stored on your device. Keeping your device secure is your responsibility.</li>
       <li><strong style="color:var(--text)">Lawful use.</strong> You agree not to use Hesych for any illegal or unauthorized purpose.</li>
     </ul>

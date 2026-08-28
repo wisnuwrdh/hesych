@@ -10,7 +10,7 @@ const compareRows = [
   { label: "Password Expiry Reminder", free: true, pro: true },
   { label: "Secret Lock (Hide for a While)", free: true, pro: true },
   { label: "Vault Health Score", free: false, pro: true },
-  { label: "Encrypted Export", free: false, pro: true },
+  { label: "Encrypted Export", free: true, pro: true },
   { label: "Advanced Generator (Bulk)", free: false, pro: true },
   { label: "Custom Fields", free: false, pro: true },
   { label: "Tags & Advanced Filter", free: false, pro: true },
@@ -413,10 +413,6 @@ export default function HomePage() {
                     <li>
                       <span className="check">✓</span>
                       <span>Vault Health Score &amp; duplicate audit</span>
-                    </li>
-                    <li>
-                      <span className="check">✓</span>
-                      <span>Encrypted Export</span>
                     </li>
                     <li>
                       <span className="check">✓</span>

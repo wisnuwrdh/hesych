@@ -271,12 +271,6 @@ const BUY_HTML = String.raw`<!-- Buy Section -->
         </li>
         <li class="feature">
           <div class="feature-icon">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          </div>
-          <div><div class="feature-text">Encrypted Export / Backup</div><div class="feature-sub">Portable, encrypted vault backups</div></div>
-        </li>
-        <li class="feature">
-          <div class="feature-icon">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
           </div>
           <div><div class="feature-text">Advanced Generator</div><div class="feature-sub">Bulk generate multiple passwords at once</div></div>
@@ -342,7 +336,7 @@ const COMPARE_HTML = String.raw`<!-- Compare toggle -->
           <tr><td>Vault Health Score</td><td><span class="cross">—</span></td><td><span class="tick">✓</span></td></tr>
           <tr><td>Custom fields & tags</td><td><span class="cross">—</span></td><td><span class="tick">✓</span></td></tr>
           <tr><td>Encrypted share links</td><td><span class="cross">—</span></td><td><span class="tick">✓</span></td></tr>
-          <tr><td>Encrypted export</td><td><span class="cross">—</span></td><td><span class="tick">✓</span></td></tr>
+          <tr><td>Encrypted export</td><td><span class="tick">✓</span></td><td><span class="tick">✓</span></td></tr>
           <tr>
             <td style="font-weight:500;color:var(--text)">Price</td>
             <td class="td-free">Free</td>
