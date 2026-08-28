@@ -28,6 +28,17 @@ export function fsSupported(): boolean {
   );
 }
 
+export function opfsSupported(): boolean {
+  return (
+    typeof navigator !== "undefined" &&
+    typeof (navigator.storage as unknown as { getDirectory?: unknown }).getDirectory === "function"
+  );
+}
+
+export function isSupported(): boolean {
+  return fsSupported() || opfsSupported();
+}
+
 export function isEnabled(): boolean {
   try {
     return localStorage.getItem(STORAGE_KEYS.localBackupOn) === "1";
@@ -47,7 +58,7 @@ export function lastBackupAt(): number {
 
 /** True when items exist and (never backed up OR older than 14 days). Respects per-session dismiss. */
 export function reminderDue(itemCount: number): boolean {
-  if (itemCount === 0 || !fsSupported()) return false;
+  if (itemCount === 0 || !isSupported()) return false;
   try {
     if (sessionStorage.getItem("lb_reminder_dismissed") === "1") return false;
   } catch {}
@@ -96,17 +107,41 @@ async function ensureWritePermission(handle: DirHandle, prompt: boolean): Promis
 
 /** Ask the user for a backup folder; persists the handle and enables auto-backup. */
 export async function pickBackupFolder(): Promise<{ ok: boolean; error?: string }> {
-  const picker = (window as unknown as PickerWindow).showDirectoryPicker;
-  if (!picker) return { ok: false, error: "unsupported" };
-  let handle: DirHandle;
-  try {
-    handle = await picker({ id: "hesych-backup", mode: "readwrite" });
-  } catch {
-    return { ok: false, error: "canceled" };
+  if (fsSupported()) {
+    const picker = (window as unknown as PickerWindow).showDirectoryPicker;
+    if (!picker) return { ok: false, error: "unsupported" };
+    let handle: DirHandle;
+    try {
+      handle = await picker({ id: "hesych-backup", mode: "readwrite" });
+    } catch {
+      return { ok: false, error: "canceled" };
+    }
+    await putHandle(handle);
+    setEnabled(true);
+    return { ok: true };
   }
-  await putHandle(handle);
-  setEnabled(true);
-  return { ok: true };
+  if (opfsSupported()) {
+    // On Android / Firefox / Safari: OPFS does not need a folder picker.
+    // Auto-backup will write to the private origin storage.
+    setEnabled(true);
+    return { ok: true };
+  }
+  return { ok: false, error: "unsupported" };
+}
+
+export async function downloadOpfsBackup(): Promise<void> {
+  if (!opfsSupported()) throw new Error("unsupported");
+  const root = await (navigator.storage as unknown as { getDirectory: () => Promise<DirHandle> }).getDirectory();
+  const fh = await (root as unknown as { getFileHandle: (n: string) => Promise<{ getFile: () => Promise<File> }> }).getFileHandle(SNAPSHOT_FILENAME);
+  const file = await fh.getFile();
+  const url = URL.createObjectURL(file);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = SNAPSHOT_FILENAME;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 export async function disableLocalBackup(): Promise<void> {
@@ -118,50 +153,80 @@ let writeQueue: Promise<void> = Promise.resolve();
 /**
  * Writes the encrypted snapshot now. Throws on permission/IO failure so the
  * caller can surface a toast; silently no-ops when disabled.
+ * Supports both folder handle (desktop Chromium) and OPFS (Android/Firefox/Safari).
  */
 export async function writeSnapshot(): Promise<void> {
   if (!isEnabled()) return;
   // Queue writes to avoid concurrent createWritable collisions
   const task = writeQueue.then(async () => {
     const db = await openDB();
-    const handle = await getHandle();
-    if (!handle) throw new Error("missing_handle");
-    if (!(await ensureWritePermission(handle, false))) {
-      throw new Error("permission");
-    }
     const bundle = await exportMasterBackup(db);
     const content = JSON.stringify(bundle, null, 2);
-    // Atomic: write to tmp then overwrite final
-    const dir = handle as {
-      getFileHandle: (n: string, o: { create: boolean }) => Promise<{
-        createWritable: () => Promise<{ write: (d: string) => Promise<void>; close: () => Promise<void> }>;
-      }>;
-    };
-    const tmpName = SNAPSHOT_FILENAME + ".tmp";
-    const tmpHandle = await dir.getFileHandle(tmpName, { create: true });
-    const tmpWritable = await tmpHandle.createWritable();
-    try {
-      await tmpWritable.write(content);
-      await tmpWritable.close();
-    } catch (e) {
-      try { await tmpWritable.close(); } catch {}
-      throw e;
+
+    // Tier 1: File System Access folder (Chromium desktop)
+    if (fsSupported()) {
+      const handle = await getHandle();
+      if (handle) {
+        if (!(await ensureWritePermission(handle, false))) {
+          throw new Error("permission");
+        }
+        const dir = handle as {
+          getFileHandle: (n: string, o: { create: boolean }) => Promise<{
+            createWritable: () => Promise<{ write: (d: string) => Promise<void>; close: () => Promise<void> }>;
+          }>;
+        };
+        const tmpName = SNAPSHOT_FILENAME + ".tmp";
+        const tmpHandle = await dir.getFileHandle(tmpName, { create: true });
+        const tmpWritable = await tmpHandle.createWritable();
+        try {
+          await tmpWritable.write(content);
+          await tmpWritable.close();
+        } catch (e) {
+          try { await tmpWritable.close(); } catch {}
+          throw e;
+        }
+        const fh = await dir.getFileHandle(SNAPSHOT_FILENAME, { create: true });
+        const writable = await fh.createWritable();
+        try {
+          await writable.write(content);
+          await writable.close();
+        } catch (e) {
+          try { await writable.close(); } catch {}
+          throw e;
+        }
+        try {
+          await (dir as unknown as { removeEntry: (n: string) => Promise<void> }).removeEntry(tmpName);
+        } catch {}
+        localStorage.setItem(STORAGE_KEYS.lastLocalBackup, String(Date.now()));
+        try { sessionStorage.removeItem("lb_reminder_dismissed"); } catch {}
+        return;
+      }
+      // No handle yet but fsSupported — fall through to OPFS if available
+      if (!opfsSupported()) throw new Error("missing_handle");
     }
-    const fh = await dir.getFileHandle(SNAPSHOT_FILENAME, { create: true });
-    const writable = await fh.createWritable();
-    try {
-      await writable.write(content);
-      await writable.close();
-    } catch (e) {
-      try { await writable.close(); } catch {}
-      throw e;
+
+    // Tier 2: OPFS (Android Chrome, Firefox 111+, Safari 16.4+)
+    if (opfsSupported()) {
+      const root = await (navigator.storage as unknown as { getDirectory: () => Promise<DirHandle> }).getDirectory();
+      const fh = await (root as unknown as {
+        getFileHandle: (n: string, o: { create: boolean }) => Promise<{
+          createWritable: () => Promise<{ write: (d: string) => Promise<void>; close: () => Promise<void> }>;
+        }>;
+      }).getFileHandle(SNAPSHOT_FILENAME, { create: true });
+      const writable = await fh.createWritable();
+      try {
+        await writable.write(content);
+        await writable.close();
+      } catch (e) {
+        try { await writable.close(); } catch {}
+        throw e;
+      }
+      localStorage.setItem(STORAGE_KEYS.lastLocalBackup, String(Date.now()));
+      try { sessionStorage.removeItem("lb_reminder_dismissed"); } catch {}
+      return;
     }
-    // Best-effort cleanup tmp
-    try {
-      await (dir as unknown as { removeEntry: (n: string) => Promise<void> }).removeEntry(tmpName);
-    } catch {}
-    localStorage.setItem(STORAGE_KEYS.lastLocalBackup, String(Date.now()));
-    try { sessionStorage.removeItem("lb_reminder_dismissed"); } catch {}
+
+    throw new Error("unsupported");
   });
   writeQueue = task.catch(() => {});
   return task;

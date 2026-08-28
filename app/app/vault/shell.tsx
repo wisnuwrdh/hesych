@@ -22,9 +22,12 @@ import {
 import {
   disableLocalBackup,
   dismissReminder,
+  downloadOpfsBackup,
   fsSupported,
   isEnabled as lbEnabled,
+  isSupported as lbIsSupported,
   lastBackupAt,
+  opfsSupported,
   pickBackupFolder,
   reminderDue,
   writeSnapshot,
@@ -839,7 +842,9 @@ function LoadDevicesOnMount({ onReady }: { onReady: () => void }) {
 // ===== LOCAL AUTO-BACKUP (encrypted snapshot to a user-chosen folder) =====
 
 function LocalBackupModal({ onClose }: { onClose: () => void }) {
-  const supported = fsSupported();
+  const isFolder = fsSupported();
+  const isOpfs = opfsSupported();
+  const supported = isFolder || isOpfs;
   const [enabled, setEnabled] = useState(lbEnabled());
   const [last, setLast] = useState(lastBackupAt());
   const [savedFlash, setSavedFlash] = useState(false);
@@ -892,6 +897,16 @@ function LocalBackupModal({ onClose }: { onClose: () => void }) {
     setBusy(false);
   };
 
+  const downloadNow = async () => {
+    setBusy(true);
+    try {
+      await downloadOpfsBackup();
+    } catch (e) {
+      setModalErr("Download failed: " + (e instanceof Error ? e.message : String(e)));
+    }
+    setBusy(false);
+  };
+
   return (
     <div className="modal-overlay show" onClick={onClose}>
       <div className="modal-box" onClick={(e) => e.stopPropagation()}>
@@ -902,7 +917,11 @@ function LocalBackupModal({ onClose }: { onClose: () => void }) {
           </>
         ) : (
           <>
-            <p className="modal-desc">{t("lb.desc")}</p>
+            <p className="modal-desc">
+              {isFolder
+                ? t("lb.desc")
+                : "An encrypted snapshot is saved privately in this browser. Tap Download to save a copy."}
+            </p>
             <p className="modal-desc" style={{ marginBottom: 12 }}>
               <strong>{enabled ? t("lb.enabledOn") : t("lb.enabledOff")}</strong>
               {" · "}
@@ -928,7 +947,7 @@ function LocalBackupModal({ onClose }: { onClose: () => void }) {
                 disabled={busy}
                 onClick={() => void pickAndEnable()}
               >
-                {t("lb.pickFolder")}
+                {isFolder ? t("lb.pickFolder") : "Enable auto-backup"}
               </button>
               {enabled ? (
                 <>
@@ -940,6 +959,16 @@ function LocalBackupModal({ onClose }: { onClose: () => void }) {
                   >
                     {t("lb.backupNow")}
                   </button>
+                  {isOpfs ? (
+                    <button
+                      className="btn-cancel"
+                      style={{ justifyContent: "center", display: "flex" }}
+                      disabled={busy}
+                      onClick={() => void downloadNow()}
+                    >
+                      Download backup file
+                    </button>
+                  ) : null}
                   <button
                     className="act-btn del"
                     style={{ justifyContent: "center", display: "flex" }}
