@@ -228,10 +228,6 @@ export function LockScreen({
           </div>
         )}
 
-        <div id="lockMsg" className={`lock-msg${msgType ? ` ${msgType}` : ""}`}>
-          {locked ? t("lock.lockedFor", { s: secs }) : msg}
-        </div>
-
         <button
           type="button"
           className="btn-primary"
@@ -279,6 +275,10 @@ export function LockScreen({
           {Array.from({ length: MAX_ATTEMPTS }).map((_, i) => (
             <div key={i} className={`dot${i < attempts ? " used" : ""}`} />
           ))}
+        </div>
+
+        <div id="lockMsg" className={`lock-msg${msgType ? ` ${msgType}` : ""}`}>
+          {locked ? t("lock.lockedFor", { s: secs }) : msg}
         </div>
 
         <button
