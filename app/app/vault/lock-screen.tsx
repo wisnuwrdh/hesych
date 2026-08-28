@@ -26,20 +26,27 @@ export function LockScreen({
   const [msg, setMsg] = useState("");
   const [msgType, setMsgType] = useState<"" | "err" | "warn">("");
   const [working, setWorking] = useState(false);
-  const [secs, setSecs] = useState(() =>
-    Math.max(0, Math.ceil((lockout.lockedUntil - Date.now()) / 1000)),
-  );
+  const [now, setNow] = useState(() => Date.now());
   const [pwVisible, setPwVisible] = useState(false);
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [bioBusy, setBioBusy] = useState(false);
   const attempts = lockout.attempts;
+  // Derived from `now` so a lockout started by the parent (5th wrong attempt)
+  // shows its countdown immediately, no page refresh needed.
+  const secs =
+    lockout.lockedUntil > now ? Math.ceil((lockout.lockedUntil - now) / 1000) : 0;
   const locked = secs > 0;
 
+  // Tick only while a lockout is active; stops itself once it expires.
   useEffect(() => {
-    if (secs <= 0) return;
-    const iv = setInterval(() => setSecs((s) => Math.max(0, s - 1)), 1000);
+    if (lockout.lockedUntil <= Date.now()) return;
+    const iv = setInterval(() => {
+      const t = Date.now();
+      setNow(t);
+      if (t >= lockout.lockedUntil) clearInterval(iv);
+    }, 1000);
     return () => clearInterval(iv);
-  }, [secs]);
+  }, [lockout.lockedUntil]);
 
   const score = firstTime ? scorePassword(pw) : 0;
 
@@ -164,7 +171,7 @@ export function LockScreen({
         </div>
 
         {firstTime && (
-          <div className="lock-field-group" id="confirmWrap">
+          <div id="confirmWrap" className="lock-field-group">
             <div className="pw-field-label">{t("lock.confirmPwLabel")}</div>
             <div className="input-wrap">
       <input
@@ -202,22 +209,6 @@ export function LockScreen({
         </svg>
       </button>
     </div>
-          </div>
-        )}
-
-        {firstTime && (
-          <div id="lockStrengthWrap" style={{ marginTop: 6 }}>
-            <div style={{ display: "flex", gap: 3, marginBottom: 3 }}>
-              {[1, 2, 3, 4].map((s) => (
-                <div key={s} className={`strength-seg${score >= s ? ` s${score}` : ""}`} />
-              ))}
-            </div>
-            <div
-              className={`strength-label${score ? ` s${score}` : ""}`}
-              id="lockStrengthLabel"
-            >
-              {getStrengthLabel(score)}
-            </div>
           </div>
         )}
 
@@ -274,6 +265,23 @@ export function LockScreen({
             {bioBusy ? "\u2026" : t("bio.btnUnlock")}
           </button>
         ) : null}
+
+        {firstTime && (
+          <div id="lockStrengthWrap" style={{ marginTop: 6 }}>
+            <div style={{ display: "flex", gap: 3, marginBottom: 3 }}>
+              {[1, 2, 3, 4].map((s) => (
+                <div key={s} className={`strength-seg${score >= s ? ` s${score}` : ""}`} />
+              ))}
+            </div>
+            <div
+              className={`strength-label${score ? ` s${score}` : ""}`}
+              id="lockStrengthLabel"
+            >
+              {getStrengthLabel(score)}
+            </div>
+          </div>
+        )}
+
         <button
           type="button"
           className={"reset-link" + (firstTime ? " hidden" : "")}
