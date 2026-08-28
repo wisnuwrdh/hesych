@@ -58,6 +58,12 @@ import {
 } from "../../../lib/breach";
 import { scanVaultHealth, type HealthReport } from "../../../lib/health";
 import { scorePassword } from "../../../lib/password";
+import { getDeviceId } from "../../../lib/device";
+import {
+  getMeta as getLicenseMeta,
+  removeDevice as removeLicenseDevice,
+  revalidateIfNeeded,
+} from "../../../lib/license";
 import {
   buildShareFragment,
   type ShareInclude,
@@ -352,6 +358,7 @@ export function VaultApp() {
     }
     void populateStrengths(loaded, key);
     void loadShareLog();
+    void revalidateIfNeeded(); // silent 30-day license check, may self-downgrade
   }, [populateStrengths, loadShareLog]);
 
   const handlePasswordSubmit = useCallback(
@@ -473,6 +480,13 @@ export function VaultApp() {
   // ===== reset =====
 
   const doReset = useCallback(async () => {
+    // Best-effort: free this device's slot in the D1 registry so repeated
+    // reset→reactivate cycles don't exhaust the 3-device limit. Runs before
+    // the local clears because it needs the license key + device id.
+    const lic = getLicenseMeta();
+    if (lic && (typeof navigator === "undefined" || navigator.onLine)) {
+      void removeLicenseDevice(lic.key, getDeviceId()).catch(() => {});
+    }
     const db = dbRef.current;
     if (db) {
       db.close();
@@ -490,6 +504,7 @@ export function VaultApp() {
     localStorage.removeItem("vault_license");
     localStorage.removeItem("vault_license_verified");
     localStorage.removeItem("vault_license_at");
+    localStorage.removeItem("vault_license_email");
     localStorage.removeItem("hesych_device_id");
     localStorage.removeItem("hesych_sync_ts");
     localStorage.removeItem("vault_lockout");

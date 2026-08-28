@@ -1,6 +1,6 @@
 // POST /api/verify-license - license activation + device registry (max 3).
 // 1:1 port of the legacy Vercel function (api/verify-license.js), with
-// Supabase → D1 and Upstash → in-memory limiter.
+// Supabase → D1 and Upstash → D1-backed rate limiter (in-memory fallback).
 
 import { NextResponse } from "next/server";
 import { d1Configured, d1Query } from "../../../lib/d1";
@@ -26,25 +26,57 @@ interface GumroadResult {
   valid: boolean;
   error?: string;
   email?: string;
+  // True only when Gumroad authoritatively rejects the key (refunded,
+  // chargebacked, disabled, deleted) - never on transient/server errors.
+  revoked?: boolean;
 }
 
-// ── In-memory rate limiter: 10 requests / 15 minutes / IP per isolate ──
-const hits = new Map<string, { count: number; windowStart: number }>();
+// ── Rate limiter: 10 requests / 15 minutes / IP ──
+// Authoritative count lives in D1 (atomic UPSERT), so it survives isolate
+// restarts and is shared across PoDs. Falls back to the legacy in-memory
+// limiter while D1 is unreachable or the rate_limits table is missing.
 const WINDOW_MS = 15 * 60 * 1000;
 const MAX_HITS = 10;
 
-function rateLimited(ip: string): boolean {
+const memoryHits = new Map<string, { count: number; windowStart: number }>();
+
+function memoryRateLimited(ip: string): boolean {
   const now = Date.now();
-  const entry = hits.get(ip);
+  const entry = memoryHits.get(ip);
   if (!entry || now - entry.windowStart > WINDOW_MS) {
-    hits.set(ip, { count: 1, windowStart: now });
-    if (hits.size > 10_000) {
-      for (const [k, v] of hits) if (now - v.windowStart > WINDOW_MS) hits.delete(k);
+    memoryHits.set(ip, { count: 1, windowStart: now });
+    if (memoryHits.size > 10_000) {
+      for (const [k, v] of memoryHits) if (now - v.windowStart > WINDOW_MS) memoryHits.delete(k);
     }
     return false;
   }
   entry.count += 1;
   return entry.count > MAX_HITS;
+}
+
+async function isRateLimited(ip: string, now: number): Promise<boolean> {
+  try {
+    const rows = await d1Query<{ count: number }>(
+      `INSERT INTO rate_limits (ip, count, window_start)
+       VALUES (?, 1, ?)
+       ON CONFLICT(ip) DO UPDATE SET
+         count = CASE WHEN excluded.window_start - rate_limits.window_start > ?
+                      THEN 1 ELSE rate_limits.count + 1 END,
+         window_start = CASE WHEN excluded.window_start - rate_limits.window_start > ?
+                             THEN excluded.window_start ELSE rate_limits.window_start END
+       RETURNING count`,
+      [ip, now, WINDOW_MS, WINDOW_MS],
+    );
+    // Housekeeping: occasionally drop windows that expired long ago.
+    if (Math.random() < 0.02) {
+      void d1Query("DELETE FROM rate_limits WHERE window_start < ?", [
+        now - 2 * WINDOW_MS,
+      ]).catch(() => {});
+    }
+    return (rows[0]?.count ?? 1) > MAX_HITS;
+  } catch {
+    return memoryRateLimited(ip);
+  }
 }
 
 function autoDeviceName(req: Request): string {
@@ -77,11 +109,12 @@ async function verifyGumroadKey(licenseKey: string): Promise<GumroadResult> {
       success?: boolean;
       purchase?: { email?: string; test?: boolean; refunded?: boolean; chargebacked?: boolean };
     };
-    if (!data.success) return { valid: false };
-    if (data.purchase?.test) return { valid: false, error: "Test purchases are not valid." };
+    if (!data.success) return { valid: false, revoked: true };
+    if (data.purchase?.test)
+      return { valid: false, error: "Test purchases are not valid.", revoked: true };
     if (data.purchase?.refunded)
-      return { valid: false, error: "This license has been refunded." };
-    if (data.purchase?.chargebacked) return { valid: false };
+      return { valid: false, error: "This license has been refunded.", revoked: true };
+    if (data.purchase?.chargebacked) return { valid: false, revoked: true };
     return { valid: true, email: data.purchase?.email ?? undefined };
   } catch (err) {
     console.error("Gumroad license verification error:", err);
@@ -100,7 +133,8 @@ export async function POST(req: Request) {
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     req.headers.get("cf-connecting-ip") ||
     "unknown";
-  if (rateLimited(ip)) {
+  const now = Date.now();
+  if (await isRateLimited(ip, now)) {
     return NextResponse.json(
       { valid: false, error: "Too many attempts. Try again later." },
       { status: 429 },

@@ -1,4 +1,5 @@
 -- Cloudflare D1 schema — Hesych license device registry (max 3 devices/key)
+-- + rate_limits table for the shared verify-license rate limiter.
 --
 -- Setup:
 --   1. CF Dashboard → Workers & Pages → D1 → Create database → "hesych-license"
@@ -16,4 +17,14 @@ CREATE TABLE IF NOT EXISTS license_devices (
   device_name  TEXT NOT NULL DEFAULT '',
   activated_at INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (license_key, device_id)
+);
+
+-- Shared rate limiter for POST /api/verify-license (10 req / 15 min / IP).
+-- Applied on top of an existing install via the D1 console (same as step 2):
+--   ALTER-free additive table; until it exists the API silently falls back
+--   to the per-isolate in-memory limiter.
+CREATE TABLE IF NOT EXISTS rate_limits (
+  ip           TEXT PRIMARY KEY,
+  count        INTEGER NOT NULL DEFAULT 0,
+  window_start INTEGER NOT NULL DEFAULT 0
 );
