@@ -183,7 +183,7 @@ const BODY = String.raw`<nav class="nav">
   <section>
     <h2><span class="sec-num">3.</span> How Your Vault Data is Handled</h2>
     <div class="highlight">
-      Your vault is encrypted with AES-256-GCM using a key derived from your master password via PBKDF2 with 600,000 iterations. The encrypted data is stored in your browser's IndexedDB, locally on your device. It never leaves your device.
+      Your vault is encrypted with AES-256-GCM using a key derived from your master password via Argon2id (a memory-hard key derivation function with 64 MiB of memory, 3 iterations, parallelism 1). Vaults created with older versions of Hesych used PBKDF2-SHA256 with 600,000 iterations and are automatically upgraded to Argon2id the next time you unlock. The encrypted data is stored in your browser's IndexedDB, locally on your device. It never leaves your device.
     </div>
     <p>This means even if our servers were compromised, there is no vault data to steal. We are zero-knowledge by architecture, not just by policy.</p>
   </section>

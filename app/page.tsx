@@ -24,7 +24,7 @@ export const metadata = {
 const faq = [
   {
     q: "Where is my data stored?",
-    a: "All password data is encrypted with AES-256-GCM and stored only on your device. The encryption key is derived from your master password using PBKDF2. Without your master password, not even we can open your vault. Zero-knowledge by design.",
+    a: "All password data is encrypted with AES-256-GCM and stored only on your device. The encryption key is derived from your master password with Argon2id, a memory-hard key derivation function. Without your master password, not even we can open your vault. Zero-knowledge by design.",
   },
   {
     q: "What is One-Time Payment?",
@@ -47,7 +47,7 @@ const faq = [
 const features = [
   {
     title: "AES-256-GCM Encryption",
-    desc: "Military-grade standard. Keys derived with PBKDF2 from your master password.",
+    desc: "Military-grade standard. Keys derived with memory-hard Argon2id from your master password.",
     svg: (
       <svg
         viewBox="0 0 24 24"
