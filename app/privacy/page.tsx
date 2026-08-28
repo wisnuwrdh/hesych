@@ -144,7 +144,7 @@ const BODY = String.raw`<nav class="nav">
   <div class="doc-header">
     <span class="doc-kicker">Legal</span>
     <h1 class="doc-title">Privacy Policy</h1>
-    <div class="doc-meta">Last updated: April 27, 2026 · Effective immediately</div>
+    <div class="doc-meta">Last updated: August 28, 2026 · Effective immediately</div>
   </div>
 
   <!-- TL;DR -->
@@ -183,7 +183,7 @@ const BODY = String.raw`<nav class="nav">
   <section>
     <h2><span class="sec-num">3.</span> How Your Vault Data is Handled</h2>
     <div class="highlight">
-      Your vault is encrypted with AES-256-GCM using a key derived from your master password via PBKDF2 with 600,000 iterations. The encrypted data is stored in your browser's IndexedDB, locally on your device. It never leaves your device unless you explicitly use the Cloud Sync feature.
+      Your vault is encrypted with AES-256-GCM using a key derived from your master password via PBKDF2 with 600,000 iterations. The encrypted data is stored in your browser's IndexedDB, locally on your device. It never leaves your device.
     </div>
     <p>This means even if our servers were compromised, there is no vault data to steal. We are zero-knowledge by architecture, not just by policy.</p>
   </section>

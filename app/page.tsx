@@ -9,7 +9,6 @@ const compareRows = [
   { label: "TOTP / 2FA storage", free: true, pro: true },
   { label: "Password Expiry Reminder", free: true, pro: true },
   { label: "Secret Lock (Hide for a While)", free: true, pro: true },
-  { label: "Multi-device cloud sync", free: false, pro: true },
   { label: "Auto-Backup Folder", free: true, pro: true },
   { label: "Vault Health Score", free: false, pro: true },
   { label: "Encrypted Export", free: false, pro: true },
@@ -34,7 +33,7 @@ const faq = [
   },
   {
     q: "Can I use it offline?",
-    a: "Yes. Hesych runs 100% locally on your device. No internet needed to open your vault, generate passwords, or autofill forms. Cloud sync on Premium is optional and can be disabled anytime.",
+    a: "Yes. Hesych runs 100% locally on your device. No internet needed to open your vault, generate passwords, or autofill forms. Your data never touches a server.",
   },
   {
     q: "What happens if I forget my master password?",
@@ -42,7 +41,7 @@ const faq = [
   },
   {
     q: "How is Hesych different from Bitwarden?",
-    a: "Bitwarden is a great product, but it's cloud-native. Your encrypted vault lives on their servers and syncs through them. Hesych is local-first: your data never leaves your device unless you explicitly enable cloud sync. On pricing: Bitwarden Premium is $1.65/month ($19.80/year). Hesych is $9.99, once, forever.",
+    a: "Bitwarden is a great product, but it's cloud-native. Your encrypted vault lives on their servers and syncs through them. Hesych is local-first: your data never leaves your device. On pricing: Bitwarden Premium is $1.65/month ($19.80/year). Hesych is $9.99, once, forever.",
   },
 ] as const;
 
@@ -141,8 +140,8 @@ const features = [
     ),
   },
   {
-    title: "Cloud Sync",
-    desc: "End-to-end encrypted multi-device sync. Optional, never required.",
+    title: "Secret Lock (Hide for a While)",
+    desc: "Temporarily hide sensitive items. Out of sight, still encrypted.",
     svg: (
       <svg
         viewBox="0 0 24 24"
@@ -152,7 +151,10 @@ const features = [
         strokeLinecap="round"
         strokeLinejoin="round"
       >
-        <path d="M7 18a5 5 0 1 1 1-9.9A6 6 0 0 1 19 10a4 4 0 0 1 0 8z" />
+        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+        <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+        <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" />
+        <line x1="1" y1="1" x2="23" y2="23" />
       </svg>
     ),
   },
@@ -371,7 +373,7 @@ export default function HomePage() {
                 <div className="sec-head">
                   <span className="sec-kicker">/ Free vs Premium</span>
                   <h2 className="sec-title">
-                    Free forever. Upgrade only if you need sync.
+                    Free forever. Upgrade for the power tools.
                   </h2>
                 </div>
 
@@ -424,10 +426,6 @@ export default function HomePage() {
                     <li>
                       <span className="check">✓</span>
                       <span>All Premium features, forever</span>
-                    </li>
-                    <li>
-                      <span className="check">✓</span>
-                      <span>End-to-end encrypted cloud sync</span>
                     </li>
                     <li>
                       <span className="check">✓</span>
@@ -573,11 +571,6 @@ export default function HomePage() {
           </div>
         </div>
       </footer>
-
-      <div className="toast" role="status" aria-live="polite">
-        <span className="tick">✓</span>
-        <span>You&apos;re on the waitlist. Check your inbox!</span>
-      </div>
     </div>
   );
 }

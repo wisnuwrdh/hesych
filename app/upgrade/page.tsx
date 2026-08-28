@@ -265,12 +265,6 @@ const BUY_HTML = String.raw`<!-- Buy Section -->
         </li>
         <li class="feature">
           <div class="feature-icon">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
-          </div>
-          <div><div class="feature-text">Cloud Sync</div><div class="feature-sub">E2E encrypted sync across all devices</div></div>
-        </li>
-        <li class="feature">
-          <div class="feature-icon">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
           </div>
           <div><div class="feature-text">Vault Health Score</div><div class="feature-sub">Detect weak, old, and duplicate passwords</div></div>
@@ -349,7 +343,6 @@ const COMPARE_HTML = String.raw`<!-- Compare toggle -->
           <tr><td>Custom fields & tags</td><td><span class="cross">—</span></td><td><span class="tick">✓</span></td></tr>
           <tr><td>Encrypted share links</td><td><span class="cross">—</span></td><td><span class="tick">✓</span></td></tr>
           <tr><td>Encrypted export</td><td><span class="cross">—</span></td><td><span class="tick">✓</span></td></tr>
-          <tr><td>Cloud sync</td><td><span class="cross">—</span></td><td><span class="tick">✓</span></td></tr>
           <tr>
             <td style="font-weight:500;color:var(--text)">Price</td>
             <td class="td-free">Free</td>
