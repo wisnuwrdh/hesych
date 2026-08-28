@@ -560,14 +560,13 @@ export function VaultApp() {
     [withKey, items],
   );
 
+  // items[] state holds username as plaintext (decrypted at load) — return as-is.
   const decryptUsername = useCallback(
-    (id: number): Promise<string> =>
-      withKey(async (_db, key) => {
-        const item = items.find((i) => i.id === id);
-        if (!item || !item.username) return "";
-        return decryptWith(key, item.username);
-      }),
-    [withKey, items],
+    (id: number): Promise<string> => {
+      const item = items.find((i) => i.id === id);
+      return Promise.resolve(item?.username ?? "");
+    },
+    [items],
   );
 
   const decryptTotp = useCallback(
@@ -650,7 +649,7 @@ export function VaultApp() {
                       username: input.username,
                       category: input.category,
                       tags: input.tags,
-                      custom_fields: input.custom_fields,
+                      custom_fields: row.custom_fields,
                       password: row.password,
                       totp_secret: row.totp_secret,
                       notes: input.notes,
