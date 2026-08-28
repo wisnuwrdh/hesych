@@ -48,7 +48,7 @@ The app runs entirely client-side. Opening your vault, generating passwords, che
 
 | Layer | Detail |
 |---|---|
-| Encryption | AES-256-GCM; key derived from master password via PBKDF2-SHA256 ×600,000 |
+| Encryption | AES-256-GCM via envelope DEK; master password stretched with Argon2id (m=64 MiB, t=3, p=1) — legacy PBKDF2 vaults upgrade transparently on unlock |
 | Storage | IndexedDB (`VaultDB`), rows encrypted at rest; metadata encrypted since schema v6 |
 | Verifier | Encrypted "vault OK" marker — the server-equivalent check happens on device |
 | Network | Data endpoints: none. Only outbound calls: HIBP range API (5-char hash prefix) and license verification |
@@ -62,7 +62,8 @@ Clearing site data with a full wipe removes the vault itself — always keep an 
 
 - Next.js 16 App Router (webpack) + React 19 + TypeScript strict
 - Tailwind CSS 4, custom legacy-parity design tokens
-- Vitest (79 tests) · ESLint 9
+- Vitest (89 tests) · ESLint 9
+- hash-wasm — Argon2id KDF for the vault envelope
 - Cloudflare Pages via `@opennextjs/cloudflare` (Direct Upload through GitHub Actions)
 - Cloudflare D1 — license device registry (max 3 devices/key) + shared rate limiter
 - Gumroad — payment + license key issuance, verified server-side proxy
@@ -86,7 +87,7 @@ test/           Vitest suites (crypto/db/vault/auth/share/totp/…)
 ```bash
 npm install
 npm run dev          # http://localhost:3000
-npm test             # 79 tests
+npm test             # 89 tests
 npm run typecheck    # tsc --noEmit
 npm run lint         # eslint
 ```

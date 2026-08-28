@@ -19,7 +19,9 @@ import {
   createPasswordEnvelope,
   generateRawDek,
   importDek,
+  needsUpgrade,
   unwrapWithPassword,
+  type PwEnvelope,
 } from "../../../lib/envelope";
 import { listBiometrics, unlockWithBiometrics } from "../../../lib/biometric";
 import {
@@ -377,12 +379,28 @@ export function VaultApp() {
         const rec = await vaultKeysGet();
         if (rec) {
           // jalur envelope baru
+          let env: PwEnvelope;
           try {
-            raw = await unwrapWithPassword(JSON.parse(rec.pw_env), pw);
+            env = JSON.parse(rec.pw_env) as PwEnvelope;
+            raw = await unwrapWithPassword(env, pw);
           } catch {
             const next = recordFail(active);
             setLockout(next);
             return false; // password salah
+          }
+          if (needsUpgrade(env)) {
+            // Upgrade KDF transparan: re-wrap DEK PBKDF2 (v:1) → Argon2id
+            // (v:2). Fire-and-forget dan idempoten — kalau tab ditutup di
+            // tengah jalan, unlock berikutnya mencoba lagi.
+            void createPasswordEnvelope(pw, raw)
+              .then((next) =>
+                vaultKeysPut({
+                  id: "dek",
+                  pw_env: JSON.stringify(next),
+                  created_at: Date.now(),
+                }),
+              )
+              .catch((e) => console.warn("envelope upgrade", e));
           }
         } else if (localStorage.getItem("vault_ver")) {
           // migrasi sekali-jalan dari vault legacy (verifier PBKDF2)
