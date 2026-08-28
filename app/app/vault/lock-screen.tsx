@@ -212,12 +212,21 @@ export function LockScreen({
           </div>
         )}
 
-
-        <div className="attempt-dots" id="dots">
-          {Array.from({ length: MAX_ATTEMPTS }).map((_, i) => (
-            <div key={i} className={`dot${i < attempts ? " used" : ""}`} />
-          ))}
-        </div>
+        {firstTime && (
+          <div id="lockStrengthWrap" style={{ marginTop: 6 }}>
+            <div style={{ display: "flex", gap: 3, marginBottom: 3 }}>
+              {[1, 2, 3, 4].map((s) => (
+                <div key={s} className={`strength-seg${score >= s ? ` s${score}` : ""}`} />
+              ))}
+            </div>
+            <div
+              className={`strength-label${score ? ` s${score}` : ""}`}
+              id="lockStrengthLabel"
+            >
+              {getStrengthLabel(score)}
+            </div>
+          </div>
+        )}
 
         <div id="lockMsg" className={`lock-msg${msgType ? ` ${msgType}` : ""}`}>
           {locked ? t("lock.lockedFor", { s: secs }) : msg}
@@ -266,21 +275,11 @@ export function LockScreen({
           </button>
         ) : null}
 
-        {firstTime && (
-          <div id="lockStrengthWrap" style={{ marginTop: 6 }}>
-            <div style={{ display: "flex", gap: 3, marginBottom: 3 }}>
-              {[1, 2, 3, 4].map((s) => (
-                <div key={s} className={`strength-seg${score >= s ? ` s${score}` : ""}`} />
-              ))}
-            </div>
-            <div
-              className={`strength-label${score ? ` s${score}` : ""}`}
-              id="lockStrengthLabel"
-            >
-              {getStrengthLabel(score)}
-            </div>
-          </div>
-        )}
+        <div className="attempt-dots" id="dots">
+          {Array.from({ length: MAX_ATTEMPTS }).map((_, i) => (
+            <div key={i} className={`dot${i < attempts ? " used" : ""}`} />
+          ))}
+        </div>
 
         <button
           type="button"
