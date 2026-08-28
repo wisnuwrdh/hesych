@@ -13,16 +13,19 @@
 ### Free
 - 🔒 Unlimited items with AES-256-GCM encryption (PBKDF2-SHA256, 600k iterations)
 - 📶 100% offline — no internet needed to open your vault
-- 🗂️ Categories, favorites, tags, search & advanced filters
-- 🔑 Password generator + passphrase mode (+ bulk mode)
+- 🗂️ Categories, favorites & search
+- 🔑 Password generator + passphrase mode
 - ⏱️ Built-in TOTP 2FA codes with countdown
 - 🚨 Breach checking via Have I Been Pwned (**k-anonymity** — your password never leaves the device unhashed)
-- 📤 Encrypted backup export/import (master-password or custom-passphrase mode)
 - 🌗 Dark / light theme, installable PWA
 - 🔍 Secret Lock — temporarily hide sensitive secrets ("digital detox" timer)
 
 ### Premium ($9.99 lifetime)
 - ❤️ Vault Health Score — weak/reused/old/breached audit with fix flow
+- 📤 Encrypted backup export/import (master-password or custom-passphrase mode)
+- 🔗 Encrypted share links — securely share one credential via passphrase-protected URL
+- 🏷️ Tags & advanced filters
+- ⚡ Bulk password generator
 - 🕘 Per-item password history
 - 🎨 Custom fields (text/password entries per item)
 
@@ -46,9 +49,9 @@
 
 - **Next.js 16** App Router (webpack) + **React 19** + TypeScript strict
 - **Tailwind CSS 4**, custom legacy-parity design tokens
-- **Vitest** (63 tests) · ESLint 9
+- **Vitest** (79 tests) · ESLint 9
 - **Cloudflare Pages** via `@opennextjs/cloudflare` (Direct Upload through GitHub Actions)
-- **Cloudflare D1** — license device registry (max 3 devices/key)
+- **Cloudflare D1** — license device registry (max 3 devices/key) + shared rate limiter
 - **Gumroad** — payment + license key issuance, verified server-side proxy
 
 ```
@@ -66,9 +69,9 @@ test/           Vitest suites (crypto/db/vault/auth/share/totp/…)
 ## 🚀 Getting started
 
 ```bash
-npm install          # Chromium desktop recommended for full features
+npm install
 npm run dev          # http://localhost:3000
-npm test             # 63 tests
+npm test             # 79 tests
 npm run typecheck    # tsc --noEmit
 npm run lint         # eslint
 ```
@@ -106,9 +109,10 @@ npx wrangler@latest pages deploy .open-next --project-name=hesych --branch=main
 Buyers receive a license key by email after purchase → enter it in the app
 (menu ⋮ → *Enter License Key*) → device is registered against the D1 registry
 (max **3 devices/key**, removable from *Manage License*). Verification proxies
-through `/api/verify-license` so refunds/chargebacks are honored automatically.
-
----
+through `/api/verify-license` so refunds/chargebacks are honored automatically:
+every vault open silently re-checks the key (at most once per 30 days) and
+downgrades the device if Gumroad reports the license refunded, chargebacked,
+or disabled. Resetting a vault also frees that device's registry slot.
 
 ---
 
@@ -117,12 +121,14 @@ through `/api/verify-license` so refunds/chargebacks are honored automatically.
 - [x] Biometric unlock feature **removed entirely** (see [#1](https://github.com/wisnuwrdh/hesych/issues/1))
 - [ ] Multi-device cloud sync (encrypted snapshot merge; D1 `vault_sync` foundation planned)
 - [ ] Content cluster: feature deep-dives & comparisons
+- ⚠️ Encrypted Export is marketed as Premium but not yet gated in the app UI
 
 ---
 
 ## 📮 Contact
 
-Questions about security or licensing: [hi@hesych.com](mailto:hi@hesych.com)
+Questions about security or licensing: [hi@hesych.com](mailto:hi@hesych.com) ·
+[Contact page](https://hesych.com/contact) · [@hesych on X](https://x.com/hesych)
 
 ---
 
