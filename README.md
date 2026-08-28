@@ -18,7 +18,6 @@
 - ⏱️ Built-in TOTP 2FA codes with countdown
 - 🚨 Breach checking via Have I Been Pwned (**k-anonymity** — your password never leaves the device unhashed)
 - 📤 Encrypted backup export/import (master-password or custom-passphrase mode)
-- 💾 Local auto-backup — encrypted snapshot to a folder you choose (FS Access API)
 - 🌗 Dark / light theme, installable PWA
 - 🔍 Secret Lock — temporarily hide sensitive secrets ("digital detox" timer)
 
@@ -56,7 +55,7 @@
 app/            Next.js routes (landing, /app vault, /share viewer, legal, api/)
 app/app/vault/  Vault UI components (lock screen, shell, sheets, cards…)
 lib/            Core logic: crypto, db, auth, bio, breach, share, health,
-                backup, localbackup, license, totp, i18n…
+                backup, license, totp, i18n…
 scripts/        Owner utilities: d1-schema.sql, gen-license.mjs (legacy),
                 pages-postbuild.mjs
 test/           Vitest suites (crypto/db/vault/auth/share/totp/…)
@@ -73,9 +72,6 @@ npm test             # 63 tests
 npm run typecheck    # tsc --noEmit
 npm run lint         # eslint
 ```
-
-> Local auto-backup folder picker requires a Chromium-based browser in a
-> secure context (HTTPS or localhost).
 
 ---
 
@@ -120,7 +116,6 @@ through `/api/verify-license` so refunds/chargebacks are honored automatically.
 
 - [x] Biometric unlock feature **removed entirely** (see [#1](https://github.com/wisnuwrdh/hesych/issues/1))
 - [ ] Multi-device cloud sync (encrypted snapshot merge; D1 `vault_sync` foundation planned)
-- [ ] Google Drive auto-backup (pending scope decision on Google's restricted-scope verification)
 - [ ] Content cluster: feature deep-dives & comparisons
 
 ---

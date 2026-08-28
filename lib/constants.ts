@@ -38,7 +38,5 @@ export const STORAGE_KEYS = {
   licenseVerified: "vault_license_verified",
   licenseAt: "vault_license_at",
   licenseEmail: "vault_license_email",
-  lastLocalBackup: "hesych_last_backup",
-  localBackupOn: "hesych_local_backup_on",
   syncTs: "hesych_sync_ts",
 } as const;
