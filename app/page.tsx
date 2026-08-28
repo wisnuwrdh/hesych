@@ -10,7 +10,7 @@ const compareRows = [
   { label: "Password Expiry Reminder", free: true, pro: true },
   { label: "Secret Lock (Hide for a While)", free: true, pro: true },
   { label: "Multi-device cloud sync", free: false, pro: true },
-  { label: "Automatic backups", free: false, pro: true },
+  { label: "Auto-Backup Folder", free: true, pro: true },
   { label: "Vault Health Score", free: false, pro: true },
   { label: "Encrypted Export", free: false, pro: true },
   { label: "Advanced Generator (Bulk)", free: false, pro: true },
@@ -121,6 +121,22 @@ const features = [
           d="M3,4.75l3.1,3.1A27.28,27.28,0,0,0,3.18,9.42a1.51,1.51,0,0,0-.48,2.11l.11.17a1.49,1.49,0,0,0,2,.46,24.69,24.69,0,0,1,3.67-1.9l3.14,3.14a20.63,20.63,0,0,0-4.53,2.09,1.51,1.51,0,0,0-.46,2.1l.11.17a1.49,1.49,0,0,0,2,.46A17.46,17.46,0,0,1,14.25,16l3.6,3.6a13.39,13.39,0,0,0-6.79,1.93,1.5,1.5,0,0,0-.46,2.09l.1.16a1.52,1.52,0,0,0,2.06.44,10.2,10.2,0,0,1,9-.7L29,30.75l1.41-1.41-26-26Z"
           fill="currentColor"
         />
+      </svg>
+    ),
+  },
+  {
+    title: "Auto-Backup Folder",
+    desc: "Encrypted snapshot to your folder. Private, no server.",
+    svg: (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
       </svg>
     ),
   },
