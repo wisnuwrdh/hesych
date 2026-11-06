@@ -23,11 +23,12 @@ The app runs entirely client-side. Opening your vault, generating passwords, che
 
 ### Free
 
-- Unlimited items with AES-256-GCM encryption (PBKDF2-SHA256, 600k iterations)
+- Unlimited items with AES-256-GCM encryption (Argon2id; legacy PBKDF2 vaults upgrade transparently on unlock)
 - 100% offline — no internet needed to open your vault
 - Categories, favorites & search
 - Password generator + passphrase mode
 - Built-in TOTP 2FA codes with countdown
+- Biometric unlock via WebAuthn PRF (per-browser credentials)
 - Breach checking via Have I Been Pwned (k-anonymity — your password never leaves the device unhashed)
 - Encrypted backup export/import (master-password or custom-passphrase mode)
 - Dark / light theme, installable PWA
@@ -135,7 +136,8 @@ device's registry slot.
 
 ## Roadmap / Known issues
 
-- [x] Biometric unlock feature removed entirely (see [#1](https://github.com/wisnuwrdh/hesych/issues/1))
+- [x] Biometric unlock via WebAuthn PRF (per-browser credentials)
+- [ ] Browser extension (autofill) — currently copy-to-clipboard only
 - [ ] Multi-device cloud sync (encrypted snapshot merge; D1 `vault_sync` foundation planned)
 - [ ] Content cluster: feature deep-dives & comparisons
 

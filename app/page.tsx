@@ -7,12 +7,15 @@ const compareRows = [
   { label: "AES-256-GCM encryption", free: true, pro: true },
   { label: "HIBP breach check", free: true, pro: true },
   { label: "TOTP / 2FA storage", free: true, pro: true },
-  { label: "Password Expiry Reminder", free: true, pro: true },
+  { label: "Biometric unlock (WebAuthn)", free: true, pro: true },
+  { label: "Passphrase generator", free: true, pro: true },
+  { label: "Old-password badge", free: true, pro: true },
   { label: "Secret Lock (Hide for a While)", free: true, pro: true },
   { label: "Vault Health Score", free: false, pro: true },
   { label: "Encrypted Export", free: true, pro: true },
   { label: "Advanced Generator (Bulk)", free: false, pro: true },
   { label: "Custom Fields", free: false, pro: true },
+  { label: "Per-item password history", free: false, pro: true },
   { label: "Tags & Advanced Filter", free: false, pro: true },
   { label: "Encrypted Share Link", free: false, pro: true },
 ] as const;
@@ -28,11 +31,11 @@ const faq = [
   },
   {
     q: "What is One-Time Payment?",
-    a: "You pay $9.99 once and get all Premium features forever, including free updates for the next version. No monthly bills, no auto-renew. The opposite of every other password manager.",
+    a: "You pay $9.99 once and get all current Premium features, including free updates for all 1.x releases. No monthly bills, no auto-renew. The opposite of every other password manager.",
   },
   {
     q: "Can I use it offline?",
-    a: "Yes. Hesych runs 100% locally on your device. No internet needed to open your vault, generate passwords, or autofill forms. Your data never touches a server.",
+    a: "Yes. Hesych runs 100% locally on your device. No internet needed to open your vault or generate passwords. Your data never touches a server.",
   },
   {
     q: "What happens if I forget my master password?",
@@ -42,12 +45,16 @@ const faq = [
     q: "How is Hesych different from Bitwarden?",
     a: "Bitwarden is a great product, but it's cloud-native. Your encrypted vault lives on their servers and syncs through them. Hesych is local-first: your data never leaves your device. On pricing: Bitwarden Premium is $1.65/month ($19.80/year). Hesych is $9.99, once, forever.",
   },
+  {
+    q: "Does Hesych have browser autofill or multi-device sync?",
+    a: "Not yet. Today you copy credentials from the vault and use encrypted export to move a vault between devices. A browser extension for autofill and encrypted sync are on the roadmap but are not available yet. We will not list them as features until they ship.",
+  },
 ] as const;
 
 const features = [
   {
     title: "AES-256-GCM Encryption",
-    desc: "Military-grade standard. Keys derived with memory-hard Argon2id from your master password.",
+    desc: "AES-256-GCM, the same standard used to protect sensitive data. Keys derived with memory-hard Argon2id from your master password.",
     svg: (
       <svg
         viewBox="0 0 24 24"
@@ -81,7 +88,7 @@ const features = [
   },
   {
     title: "TOTP / 2FA",
-    desc: "Store two-factor codes. Auto-fill 6-digit codes in one tap.",
+    desc: "Store two-factor codes. Copy a fresh 6-digit code in one tap.",
     svg: (
       <svg
         viewBox="0 0 24 24"
@@ -97,8 +104,50 @@ const features = [
     ),
   },
   {
+    title: "Biometric Unlock",
+    desc: "Unlock with fingerprint or face via WebAuthn. Works in modern browsers.",
+    svg: (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4" />
+        <path d="M14 13.12c0 2.38 0 6.38-1 8.88" />
+        <path d="M17.29 21.02c.12-.6.43-2.3.5-3.02" />
+        <path d="M2 12a10 10 0 0 1 18-6" />
+        <path d="M2 16h.01" />
+        <path d="M21.8 16c.2-2 .131-5.354 0-6" />
+        <path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2" />
+        <path d="M8.65 22c.21-.66.45-1.32.57-2" />
+        <path d="M9 6.8a6 6 0 0 1 9 5.2v2" />
+      </svg>
+    ),
+  },
+  {
+    title: "Passphrase Generator",
+    desc: "Memorable word-based passphrases, generated locally on your device.",
+    svg: (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <circle cx="7.5" cy="15.5" r="4.5" />
+        <path d="m21 2-9.6 9.6" />
+        <path d="m15.5 7.5 3 3L22 7l-3-3" />
+      </svg>
+    ),
+  },
+  {
     title: "100% Offline",
-    desc: "No servers. No telemetry. Airplane mode? Works perfectly.",
+    desc: "No vault server. No telemetry. Airplane mode? Works perfectly.",
     svg: (
       <svg
         viewBox="0 0 36 36"
@@ -218,12 +267,12 @@ export default function HomePage() {
             <div className="hero-inner">
               <div className="hero-text">
                 <h1>
-                  <span>The Most Secure Password Manager.</span>
+                  <span>Local-First Password Manager.</span>
                   <br />
                   <span className="hl">No Subscription.</span>
                 </h1>
                 <p className="hero-sub">
-                  Local AES-256 encryption. No cloud. Pay once, yours forever.
+                  Local AES-256 encryption. No cloud. Pay once, yours to keep.
                 </p>
                 <div className="hero-ctas">
                   <Link href="/app" className="btn btn-lg">
@@ -417,16 +466,11 @@ export default function HomePage() {
                     <span className="big">$9.99</span>
                     <span className="usd">USD</span>
                   </div>
-                  <div className="price-strike">
-                    <span className="price-strike-label">was</span>
-                    <s>$19.99</s>
-                    <span className="price-strike-note">one-time only</span>
-                  </div>
 
                   <ul className="price-feats">
                     <li>
                       <span className="check">✓</span>
-                      <span>All Premium features, forever</span>
+                      <span>All current Premium features</span>
                     </li>
                     <li>
                       <span className="check">✓</span>
@@ -438,11 +482,11 @@ export default function HomePage() {
                     </li>
                     <li>
                       <span className="check">✓</span>
-                      <span>Free updates, forever</span>
+                      <span>Free updates for all 1.x releases</span>
                     </li>
                     <li>
                       <span className="check">✓</span>
-                      <span>Priority email support</span>
+                      <span>Email support</span>
                     </li>
                   </ul>
 
@@ -452,8 +496,8 @@ export default function HomePage() {
                     </Link>
                   </div>
                   <p className="price-foot">
-                    30-day money-back guarantee · No questions asked · One-time
-                    payment
+                    3 devices per license · 30-day money-back guarantee ·
+                    One-time payment
                   </p>
                 </div>
               </div>

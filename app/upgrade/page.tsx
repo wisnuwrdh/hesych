@@ -127,8 +127,8 @@ body::before{
 
 /* ── TRUST ROW ── */
 .trust{
-  display:flex;align-items:center;justify-content:center;
-  gap:20px;padding:14px 0;
+  display:flex;align-items:center;justify-content:center;flex-wrap:wrap;
+  gap:8px 20px;padding:14px 0;
   border-top:1px solid var(--border);margin-top:4px;
 }
 .trust-item{
@@ -254,7 +254,7 @@ const BUY_HTML = String.raw`<!-- Buy Section -->
       <div class="price-badge">PAY ONCE · USE FOREVER</div>
 
       <div class="card-title">Hesych Premium</div>
-      <div class="card-sub">One-time payment. Lifetime access. No subscription, no renewal, no surprises.</div>
+      <div class="card-sub">One-time payment. Lifetime access on up to 3 devices. No subscription, no renewal, no surprises.</div>
 
       <ul class="features">
         <li class="feature">
@@ -267,7 +267,7 @@ const BUY_HTML = String.raw`<!-- Buy Section -->
           <div class="feature-icon">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
           </div>
-          <div><div class="feature-text">Vault Health Score</div><div class="feature-sub">Detect weak, old, and duplicate passwords</div></div>
+          <div><div class="feature-text">Vault Health Score</div><div class="feature-sub">Detect weak, reused, old, and breached passwords</div></div>
         </li>
         <li class="feature">
           <div class="feature-icon">
@@ -310,6 +310,10 @@ const BUY_HTML = String.raw`<!-- Buy Section -->
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 9l4 4 8-8"/></svg>
           Instant delivery
         </div>
+        <div class="trust-item">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1v14M1 8h14"/><circle cx="8" cy="8" r="7"/></svg>
+          30-day refund
+        </div>
       </div>
     </div>
 
@@ -332,8 +336,12 @@ const COMPARE_HTML = String.raw`<!-- Compare toggle -->
           <tr><td>AES-256-GCM encryption</td><td><span class="tick">✓</span></td><td><span class="tick">✓</span></td></tr>
           <tr><td>HIBP breach check</td><td><span class="tick">✓</span></td><td><span class="tick">✓</span></td></tr>
           <tr><td>TOTP / 2FA storage</td><td><span class="tick">✓</span></td><td><span class="tick">✓</span></td></tr>
+          <tr><td>Biometric unlock (WebAuthn)</td><td><span class="tick">✓</span></td><td><span class="tick">✓</span></td></tr>
+          <tr><td>Secret Lock</td><td><span class="tick">✓</span></td><td><span class="tick">✓</span></td></tr>
           <tr><td>Password generator</td><td><span class="tick">✓</span></td><td><span class="tick">✓</span></td></tr>
           <tr><td>Vault Health Score</td><td><span class="cross">—</span></td><td><span class="tick">✓</span></td></tr>
+          <tr><td>Advanced (bulk) generator</td><td><span class="cross">—</span></td><td><span class="tick">✓</span></td></tr>
+          <tr><td>Per-item password history</td><td><span class="cross">—</span></td><td><span class="tick">✓</span></td></tr>
           <tr><td>Custom fields & tags</td><td><span class="cross">—</span></td><td><span class="tick">✓</span></td></tr>
           <tr><td>Encrypted share links</td><td><span class="cross">—</span></td><td><span class="tick">✓</span></td></tr>
           <tr><td>Encrypted export</td><td><span class="tick">✓</span></td><td><span class="tick">✓</span></td></tr>
